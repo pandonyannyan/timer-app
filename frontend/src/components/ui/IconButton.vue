@@ -16,6 +16,7 @@ defineProps<{
 .icon-button {
   width: 32px;
   height: 32px;
+  color: #4b5563;
   border: none;
   border-radius: 50%;
   background: transparent;
@@ -40,5 +41,11 @@ defineProps<{
   width: 18px;
   height: 18px;
   stroke: currentColor;
+  fill: none;
+}
+
+.icon img {
+  width: 18px;
+  height: 18px;
 }
 </style>
