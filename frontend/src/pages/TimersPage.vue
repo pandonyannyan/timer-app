@@ -1,17 +1,17 @@
 <template>
   <div class="timers-page">
     <h1 class="title">Командный трекер</h1>
-
+     
     <TimersToolbar
       v-model:search-query="searchQuery"
       v-model:status-filter="statusFilter"
     />
-
+     
     <TimersTable
       :timers="visibleTimers"
       :sort-by="sortBy"
       :sort-direction="sortDirection"
-      @change-sort="changeSort"
+      @change-sort="changeSort" 
     />
   </div>
 </template>
@@ -38,7 +38,7 @@ const searchQuery = ref('')
 const statusFilter = ref<StatusFilter>('all')
 const sortBy = ref<SortBy>('title')
 const sortDirection = ref<SortDirection>('asc')
-
+      
 function getRemaining(timer: Timer) {
   if (timer.status === 'stopped') return 0
 
@@ -56,57 +56,56 @@ function getViewStatus(timer: Timer): TimerViewStatus {
 
   if (remaining <= 0) {
     const finishedAt =
-      new Date(timer.startedAt).getTime() +
-      (timer.durationSeconds - timer.timeShiftSeconds) * 1000
-
+      new Date(timer.startedAt).getTime() + (timer.durationSeconds - timer.timeShiftSeconds) * 1000
+        
     if (finishedAt <= pageOpenedAt) {
       return 'completed'
     }
-
+      
     if (isTimerCompleted(timer.id)) {
       return 'completed'
     }
-
+      
     return 'signal'
   }
-
+    
   return 'active'
 }
 
 const visibleTimers = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-
+  
   let result = timersStore.timers.filter(timer => {
     const viewStatus = getViewStatus(timer)
-
+    
     if (statusFilter.value === 'active') {
       if (viewStatus !== 'active' && viewStatus !== 'signal') {
         return false
       }
     }
-
+    
     if (!query) return true
-
+    
     return (
       timer.title.toLowerCase().includes(query) ||
       timer.description.toLowerCase().includes(query)
     )
   })
-
+  
   result = [...result].sort((a, b) => {
     let compare = 0
-
+    
     if (sortBy.value === 'title') {
       compare = a.title.localeCompare(b.title, 'ru')
     }
-
+    
     if (sortBy.value === 'remaining') {
       compare = getRemaining(a) - getRemaining(b)
     }
-
+    
     return sortDirection.value === 'asc' ? compare : -compare
   })
-
+  
   return result
 })
 
@@ -115,12 +114,12 @@ function changeSort(nextSortBy: SortBy) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
     return
   }
-
+  
   sortBy.value = nextSortBy
   sortDirection.value = 'asc'
 }
 </script>
-
+  
 <style scoped>
 .timers-page {
   width: 100%;
@@ -131,5 +130,5 @@ function changeSort(nextSortBy: SortBy) {
   color: #111827;
   font-size: 28px;
   font-weight: 700;
-}
+  }
 </style>
