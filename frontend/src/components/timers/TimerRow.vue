@@ -189,15 +189,25 @@ function stopTimer() {
   grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
   align-items: center;
   gap: 12px;
+
   background: white;
   border-radius: 16px;
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 14px 12px;
+  margin-bottom: 10px;
+
   min-height: 76px;
+
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.row:hover {
+  background: #f8fafc;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .row.highlighted {
   border: 2px solid #6f89ad;
+  background: #f9fbff;
 }
 
 .name {

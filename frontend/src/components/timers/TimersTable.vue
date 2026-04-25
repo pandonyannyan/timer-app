@@ -36,9 +36,14 @@ const timersStore = useTimersStore()
   display: grid;
   grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
   gap: 12px;
-  padding: 16px 12px;
-  font-size: 14px;
-  color: #4b5563;
+
+  padding: 12px;
+  margin-bottom: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
 }
 
 </style>
