@@ -1,67 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import type { Timer, TimerViewStatus } from '../../types/timer'
-import { useNow } from '../../utils/useNow'
-import { isTimerCompleted, addCompletedTimer } from '../../utils/completedTimers'
+import { computed } from 'vue'
+import type { Timer } from '../../types/timer'
+import { addCompletedTimer } from '../../utils/completedTimers'
+import { useTimerView } from '../../composables/useTimerView'
 
 const props = defineProps<{
   timer: Timer
 }>()
 
-const { now } = useNow()
-
-const wasExpiredOnMount = ref(false)
-
-const effectiveDuration = computed(() => {
-  return props.timer.durationSeconds - props.timer.timeShiftSeconds
-})
-
-const startedAtMs = computed(() => {
-  return new Date(props.timer.startedAt).getTime()
-})
-
-const elapsed = computed(() => {
-  return Math.floor((now.value - startedAtMs.value) / 1000)
-})
-
-const remaining = computed(() => {
-  return effectiveDuration.value - elapsed.value
-})
-
-onMounted(() => {
-  const finishedAt = startedAtMs.value + effectiveDuration.value * 1000
-
-  wasExpiredOnMount.value = finishedAt <= Date.now()
-})
-
-const viewStatus = computed<TimerViewStatus>(() => {
-  if (props.timer.status === 'stopped') return 'stopped'
-
-  if (remaining.value <= 0) {
-    if (wasExpiredOnMount.value) {
-      return 'completed'
-    }
-
-    if (isTimerCompleted(props.timer.id)) {
-      return 'completed'
-    }
-
-    return 'signal'
-  }
-
-  return 'active'
-})
-
-const statusLabel = computed(() => {
-  const labels: Record<TimerViewStatus, string> = {
-    active: 'Активен',
-    stopped: 'Остановлен',
-    signal: 'Сигнал',
-    completed: 'Завершён',
-  }
-
-  return labels[viewStatus.value]
-})
+const {
+  remaining,
+  viewStatus,
+  statusLabel,
+} = useTimerView(props.timer)
 
 const canStop = computed(() => viewStatus.value === 'active')
 const canComplete = computed(() => viewStatus.value === 'signal')
