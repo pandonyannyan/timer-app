@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Timer } from '../types/timer'
+import { removeCompletedTimer } from '../utils/completedTimers'
 
 export const useTimersStore = defineStore('timers', {
   state: () => ({
@@ -58,4 +59,27 @@ export const useTimersStore = defineStore('timers', {
       },
     ] as Timer[],
   }),
+
+  actions: {
+    restartTimer(timerId: string, timeShiftSeconds = 0) {
+      const timer = this.timers.find(t => t.id === timerId)
+      if (!timer) return
+
+      timer.status = 'active'
+      timer.startedAt = new Date().toISOString()
+      timer.timeShiftSeconds = timeShiftSeconds
+      timer.updatedAt = new Date().toISOString()
+
+      // сбрасываем локальный completed
+      removeCompletedTimer(timerId)
+    },
+
+    stopTimer(timerId: string) {
+      const timer = this.timers.find(t => t.id === timerId)
+      if (!timer) return
+
+      timer.status = 'stopped'
+      timer.updatedAt = new Date().toISOString()
+    },
+  },
 })

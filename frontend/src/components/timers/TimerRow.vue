@@ -5,10 +5,15 @@ import { addCompletedTimer } from '../../utils/completedTimers'
 import { isSoundEnabled, toggleTimerSound } from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
 import beepSound from '../../assets/sounds/beep.mp3'
+import { useTimersStore } from '../../stores/timers'
+import RestartTimerModal from './RestartTimerModal.vue'
 
 const props = defineProps<{
   timer: Timer
 }>()
+
+const timersStore = useTimersStore()
+const showRestartModal = ref(false)
 
 const {
   remaining,
@@ -66,6 +71,28 @@ function toggleSound() {
     audio.currentTime = 0
   }
 }
+
+function openRestartModal() {
+  showRestartModal.value = true
+}
+
+function handleRestart(timeShiftSeconds: number) {
+  timersStore.restartTimer(props.timer.id, timeShiftSeconds)
+
+  hasPlayedSound.value = false
+  audio.pause()
+  audio.currentTime = 0
+
+  showRestartModal.value = false
+}
+
+function stopTimer() {
+  timersStore.stopTimer(props.timer.id)
+
+  audio.pause()
+  audio.currentTime = 0
+}
+
 </script>
 
 <template>
@@ -85,10 +112,12 @@ function toggleSound() {
       {{ timer.description }}
     </div>
 
-    <div>{{ durationMinutes }} мин</div>
+    <div>
+      {{ durationMinutes }} мин
+    </div>
 
     <div class="time">
-       {{ formatTime(remaining) }}
+      {{ viewStatus === 'stopped' ? '00:00:00' : formatTime(remaining) }}
     </div>
 
     <div class="last-run">
@@ -98,32 +127,42 @@ function toggleSound() {
 
     <div class="actions">
       <button
-         v-if="canComplete"
-         class="complete-btn"
-         @click="completeTimer"
+        v-if="canComplete"
+        class="complete-btn"
+        @click="completeTimer"
       >
-         Завершить
+        Завершить
       </button>
 
-      <button title="Перезапустить">↻</button>
-      <button v-if="canStop" title="Остановить">□</button>
+      <button title="Перезапустить" @click="openRestartModal">↻</button>
+      <button v-if="canStop" title="Остановить" @click="stopTimer">□</button>
+
       <button
-         :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
-         @click="toggleSound"
+        :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
+        @click="toggleSound"
       >
         {{ soundEnabled ? '🔊' : '🔇' }}
       </button>
+
       <button title="Редактировать">✎</button>
       <button title="Удалить">🗑</button>
     </div>
   </div>
+
+  <RestartTimerModal
+    v-if="showRestartModal"
+    @close="showRestartModal = false"
+    @submit="handleRestart"
+  />
 </template>
+
 
 <style scoped>
 .row {
   display: grid;
-  grid-template-columns: 200px 120px 1fr 120px 120px 220px 240px;
+  grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
   align-items: center;
+  gap: 12px;
   background: white;
   border-radius: 16px;
   padding: 12px;
@@ -138,7 +177,14 @@ function toggleSound() {
 .name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .img {
@@ -184,15 +230,25 @@ function toggleSound() {
 .desc {
   color: #111827;
   line-height: 1.2;
+  min-width: 0;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden;
 }
 
 .time {
   font-weight: 700;
   font-size: 16px;
+  text-align: center;
 }
 
 .last-run {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .user {
@@ -203,9 +259,10 @@ function toggleSound() {
 
 .actions {
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
 }
 
 button {

@@ -34,9 +34,11 @@ const timersStore = useTimersStore()
 
 .header {
   display: grid;
-  grid-template-columns: 200px 120px 1fr 120px 120px 220px 240px;
+  grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
+  gap: 12px;
   padding: 16px 12px;
   font-size: 14px;
   color: #4b5563;
 }
+
 </style>
