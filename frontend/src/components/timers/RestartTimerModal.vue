@@ -1,31 +1,49 @@
 <template>
-  <div class="overlay">
+  <div class="overlay" @click.self="$emit('close')">
     <div class="modal">
-      <h2>Повторный запуск</h2>
+      <div class="modal-header">
+        <h2>Повторный запуск</h2>
+        <button class="close-btn" type="button" @click="$emit('close')">×</button>
+      </div>
 
-      <label>
-        <input type="radio" value="now" v-model="mode" />
-        Запустить от текущего времени
-      </label>
+      <div class="options">
+        <label :class="['option', { active: mode === 'now' }]">
+          <input type="radio" value="now" v-model="mode" />
+          <span>Запустить от текущего времени</span>
+        </label>
 
-      <label>
-        <input type="radio" value="shift" v-model="mode" />
-        Запустить со сдвигом
-      </label>
+        <label :class="['option', { active: mode === 'shift' }]">
+          <input type="radio" value="shift" v-model="mode" />
+          <span>Запустить со сдвигом</span>
+        </label>
+      </div>
 
       <div v-if="mode === 'shift'" class="shift-block">
-        <p>Время уменьшится на указанное количество минут:</p>
+        <label class="field-label" for="shift-minutes">
+          Смещение (минут)
+        </label>
 
         <input
+          id="shift-minutes"
+          class="shift-input"
           type="number"
           v-model.number="minutes"
           min="0"
         />
+
+        <p class="hint">
+          Базовая длительность таймера будет уменьшена на указанное значение
+        </p>
       </div>
 
       <div class="actions">
-        <button @click="$emit('close')">Отмена</button>
-        <button class="primary" @click="submit">Запустить</button>
+        <button class="secondary-btn" type="button" @click="$emit('close')">
+          Отмена
+        </button>
+
+        <button class="primary-btn" type="button" @click="submit">
+          Запустить
+        </button>
       </div>
     </div>
   </div>
@@ -43,7 +61,7 @@ const mode = ref<'now' | 'shift'>('now')
 const minutes = ref(5)
 
 function submit() {
-  const shift = mode.value === 'shift' ? minutes.value * 60 : 0
+  const shift = mode.value === 'shift' ? Math.max(minutes.value, 0) * 60 : 0
   emit('submit', shift)
 }
 </script>
@@ -52,34 +70,171 @@ function submit() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  z-index: 50;
+
+  background: rgba(17, 24, 39, 0.35);
+  backdrop-filter: blur(2px);
+
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
 }
 
 .modal {
-  background: white;
+  width: 100%;
+  max-width: 460px;
+
+  background: #ffffff;
+  border-radius: 24px;
   padding: 24px;
+
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #f3f6fa;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  background: #e8eef5;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-height: 48px;
+  padding: 12px 14px;
+
+  border: 1px solid #d8e1ec;
   border-radius: 16px;
-  width: 400px;
+  background: #ffffff;
+
+  cursor: pointer;
+  color: #374151;
+}
+
+.option.active {
+  border-color: #6f89ad;
+  background: #f4f8fd;
+}
+
+.option input {
+  accent-color: #6f89ad;
 }
 
 .shift-block {
-  margin-top: 12px;
+  margin-top: 16px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shift-input {
+  width: 100%;
+  height: 44px;
+
+  border: 1px solid #d8e1ec;
+  border-radius: 14px;
+  padding: 0 14px;
+
+  font-size: 16px;
+  line-height: 44px;
+
+  box-sizing: border-box;
+
+  /* убираем стрелки Firefox */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* убираем стрелки Chrome / Edge */
+.shift-input::-webkit-outer-spin-button,
+.shift-input::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.shift-input:focus {
+  outline: 2px solid #6f89ad;
+  outline-offset: 2px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .actions {
-  margin-top: 20px;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.primary {
+.secondary-btn,
+.primary-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.secondary-btn {
+  background: #f3f6fa;
+  color: #374151;
+}
+
+.secondary-btn:hover {
+  background: #e8eef5;
+}
+
+.primary-btn {
   background: #6f89ad;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 12px;
+  color: #ffffff;
+}
+
+.primary-btn:hover {
+  background: #5f7a9f;
 }
 </style>
