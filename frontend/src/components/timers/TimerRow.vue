@@ -7,6 +7,7 @@ import { useTimerView } from '../../composables/useTimerView'
 import beepSound from '../../assets/sounds/beep.mp3'
 import { useTimersStore } from '../../stores/timers'
 import RestartTimerModal from './RestartTimerModal.vue'
+import IconButton from '../ui/IconButton.vue'
 
 const props = defineProps<{
   timer: Timer
@@ -134,18 +135,50 @@ function stopTimer() {
         Завершить
       </button>
 
-      <button title="Перезапустить" @click="openRestartModal">↻</button>
-      <button v-if="canStop" title="Остановить" @click="stopTimer">□</button>
+      <IconButton title="Перезапустить" @click="openRestartModal">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 4v6h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M20 11a8 8 0 1 0-2.3 5.7" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </IconButton>
 
-      <button
+      <IconButton v-if="canStop" title="Остановить" @click="stopTimer">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="7" y="7" width="10" height="10" rx="1" stroke-width="2" />
+        </svg>
+      </IconButton>
+
+      <IconButton
         :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
         @click="toggleSound"
       >
-        {{ soundEnabled ? '🔊' : '🔇' }}
-      </button>
+        <svg v-if="soundEnabled" viewBox="0 0 24 24" fill="none">
+          <path d="M4 9v6h4l5 4V5L8 9H4Z" stroke-width="2" stroke-linejoin="round" />
+          <path d="M16 8a5 5 0 0 1 0 8" stroke-width="2" stroke-linecap="round" />
+        </svg>
 
-      <button title="Редактировать">✎</button>
-      <button title="Удалить">🗑</button>
+        <svg v-else viewBox="0 0 24 24" fill="none">
+          <path d="M4 9v6h4l5 4V5L8 9H4Z" stroke-width="2" stroke-linejoin="round" />
+          <path d="M18 9l-4 4m0-4 4 4" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </IconButton>
+
+      <IconButton title="Редактировать">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke-width="2" stroke-linejoin="round" />
+          <path d="M13 7l4 4" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </IconButton>
+
+      <IconButton title="Удалить">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 7h14" stroke-width="2" stroke-linecap="round" />
+          <path d="M9 7V5h6v2" stroke-width="2" stroke-linejoin="round" />
+          <path d="M8 10v9h8v-9" stroke-width="2" stroke-linejoin="round" />
+        </svg>
+      </IconButton>
+
+
     </div>
   </div>
 
@@ -265,12 +298,12 @@ function stopTimer() {
   flex-wrap: nowrap;
 }
 
-button {
+/* button {
   border: none;
   background: transparent;
   cursor: pointer;
   font-size: 18px;
-}
+} */
 
 .complete-btn {
   min-width: 150px;
