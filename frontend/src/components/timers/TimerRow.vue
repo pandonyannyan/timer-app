@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Timer } from '../../types/timer'
 import { addCompletedTimer } from '../../utils/completedTimers'
 import { useTimerView } from '../../composables/useTimerView'
+import beepSound from '../../assets/sounds/beep.mp3'
 
 const props = defineProps<{
   timer: Timer
@@ -13,6 +14,21 @@ const {
   viewStatus,
   statusLabel,
 } = useTimerView(props.timer)
+
+const audio = new Audio(beepSound)
+const hasPlayedSound = ref(false)
+
+watch(viewStatus, (newStatus) => {
+  if (newStatus === 'signal' && props.timer.soundEnabled && !hasPlayedSound.value) {
+    audio.currentTime = 0
+
+    audio.play().catch(() => {
+      // Браузер может заблокировать звук, если пользователь ещё не кликал по странице
+    })
+
+    hasPlayedSound.value = true
+  }
+})
 
 const canStop = computed(() => viewStatus.value === 'active')
 const canComplete = computed(() => viewStatus.value === 'signal')
@@ -34,6 +50,9 @@ function formatTime(sec: number) {
 }
 
 function completeTimer() {
+  audio.pause()
+  audio.currentTime = 0
+
   addCompletedTimer(props.timer.id)
 }
 </script>
