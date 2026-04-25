@@ -32,7 +32,12 @@
     </div>
 
     <div class="toolbar-right">
-      <button class="secondary-btn with-icon" type="button">
+      <button
+        class="secondary-btn with-icon"
+        type="button"
+        disabled
+        title="Будет доступно только для admin после подключения ролей"
+      >
         <img :src="swapIcon" alt="swap" />
         <span>Поменять местами</span>
       </button>
@@ -163,5 +168,14 @@ defineEmits<{
   width: 18px;
   height: 18px;
   display: block;
+}
+
+.secondary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondary-btn:disabled:hover {
+  background: white;
 }
 </style>
