@@ -20,7 +20,7 @@
       </div>
 
       <div class="search">
-        <span class="search-icon">⌕</span>
+        <img class="search-icon" :src="searchIcon" alt="search" />
 
         <input
           :value="searchQuery"
@@ -32,8 +32,9 @@
     </div>
 
     <div class="toolbar-right">
-      <button class="secondary-btn" type="button">
-        Поменять местами
+      <button class="secondary-btn with-icon" type="button">
+        <img :src="swapIcon" alt="swap" />
+        <span>Поменять местами</span>
       </button>
 
       <button class="primary-btn" type="button">
@@ -44,6 +45,9 @@
 </template>
 
 <script setup lang="ts">
+import searchIcon from '../../assets/icons/search.svg'
+import swapIcon from '../../assets/icons/swap.svg'
+
 defineProps<{
   searchQuery: string
   statusFilter: 'all' | 'active'
@@ -107,8 +111,9 @@ defineEmits<{
 }
 
 .search-icon {
-  color: #6f89ad;
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .search input {
@@ -146,5 +151,17 @@ defineEmits<{
 
 .primary-btn:hover {
   background: #5f7a9f;
+}
+
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.with-icon img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 </style>
