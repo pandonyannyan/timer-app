@@ -1,12 +1,56 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import type { Timer, TimerViewStatus } from '../../types/timer'
+import { useNow } from '../../utils/useNow'
+import { isTimerCompleted, addCompletedTimer } from '../../utils/completedTimers'
 
 const props = defineProps<{
   timer: Timer
 }>()
 
-const status = computed<TimerViewStatus>(() => props.timer.status)
+const { now } = useNow()
+
+const wasExpiredOnMount = ref(false)
+
+const effectiveDuration = computed(() => {
+  return props.timer.durationSeconds - props.timer.timeShiftSeconds
+})
+
+const startedAtMs = computed(() => {
+  return new Date(props.timer.startedAt).getTime()
+})
+
+const elapsed = computed(() => {
+  return Math.floor((now.value - startedAtMs.value) / 1000)
+})
+
+const remaining = computed(() => {
+  return effectiveDuration.value - elapsed.value
+})
+
+onMounted(() => {
+  const finishedAt = startedAtMs.value + effectiveDuration.value * 1000
+
+  wasExpiredOnMount.value = finishedAt <= Date.now()
+})
+
+const viewStatus = computed<TimerViewStatus>(() => {
+  if (props.timer.status === 'stopped') return 'stopped'
+
+  if (remaining.value <= 0) {
+    if (wasExpiredOnMount.value) {
+      return 'completed'
+    }
+
+    if (isTimerCompleted(props.timer.id)) {
+      return 'completed'
+    }
+
+    return 'signal'
+  }
+
+  return 'active'
+})
 
 const statusLabel = computed(() => {
   const labels: Record<TimerViewStatus, string> = {
@@ -16,27 +60,42 @@ const statusLabel = computed(() => {
     completed: 'Завершён',
   }
 
-  return labels[status.value]
+  return labels[viewStatus.value]
 })
 
-const canStop = computed(() => status.value === 'active')
-const canComplete = computed(() => status.value === 'signal')
+const canStop = computed(() => viewStatus.value === 'active')
+const canComplete = computed(() => viewStatus.value === 'signal')
 
 const durationMinutes = computed(() => {
   return Math.round(props.timer.durationSeconds / 60)
 })
+
+function formatTime(sec: number) {
+  const s = Math.max(sec, 0)
+
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const secLeft = s % 60
+
+  return [h, m, secLeft]
+    .map(v => String(v).padStart(2, '0'))
+    .join(':')
+}
+
+function completeTimer() {
+  addCompletedTimer(props.timer.id)
+}
 </script>
 
-
 <template>
-  <div :class="['row', { highlighted: status === 'signal' }]">
+  <div :class="['row', { highlighted: viewStatus === 'signal' }]">
     <div class="name">
       <div class="img"></div>
       <span>{{ timer.title }}</span>
     </div>
 
     <div>
-      <span :class="['status', status]">
+      <span :class="['status', viewStatus]">
         {{ statusLabel }}
       </span>
     </div>
@@ -48,7 +107,7 @@ const durationMinutes = computed(() => {
     <div>{{ durationMinutes }} мин</div>
 
     <div class="time">
-      {{ status === 'signal' || status === 'completed' ? '00:00:00' : '01:35:57' }}
+       {{ formatTime(remaining) }}
     </div>
 
     <div class="last-run">
@@ -57,8 +116,12 @@ const durationMinutes = computed(() => {
     </div>
 
     <div class="actions">
-      <button v-if="canComplete" class="complete-btn">
-        Завершить
+      <button
+         v-if="canComplete"
+         class="complete-btn"
+         @click="completeTimer"
+      >
+         Завершить
       </button>
 
       <button title="Перезапустить">↻</button>
