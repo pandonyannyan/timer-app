@@ -12,4 +12,6 @@ export interface Timer {
   startedAt: string
   status: TimerStatus
   soundEnabled: boolean
+  createdAt: string
+  updatedAt: string
 }

@@ -10,16 +10,19 @@
       <div>Действия</div>
     </div>
 
-    <TimerRow view-status="signal" />
-    <TimerRow view-status="active" />
-    <TimerRow view-status="active" />
-    <TimerRow view-status="stopped" />
-    <TimerRow view-status="completed" />
+    <TimerRow
+      v-for="timer in timersStore.timers"
+      :key="timer.id"
+      :timer="timer"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import TimerRow from './TimerRow.vue'
+import { useTimersStore } from '../../stores/timers'
+
+const timersStore = useTimersStore()
 </script>
 
 <style scoped>

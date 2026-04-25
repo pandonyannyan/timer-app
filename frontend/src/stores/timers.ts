@@ -1,0 +1,48 @@
+import { defineStore } from 'pinia'
+import type { Timer } from '../types/timer'
+
+export const useTimersStore = defineStore('timers', {
+  state: () => ({
+    timers: [
+      {
+        id: '1',
+        title: 'Почёсывание пупка',
+        description: 'Почесать пупок пупочку',
+        imageUrl: '',
+        durationSeconds: 6000,
+        timeShiftSeconds: 200,
+        startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+        status: 'active',
+        soundEnabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        title: 'Покрякать',
+        description: 'Кря-кря-кря',
+        imageUrl: '',
+        durationSeconds: 1800,
+        timeShiftSeconds: 0,
+        startedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+        status: 'active',
+        soundEnabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: '3',
+        title: 'Подождать',
+        description: 'Просто ждать и ничего не делать',
+        imageUrl: '',
+        durationSeconds: 3600,
+        timeShiftSeconds: 0,
+        startedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+        status: 'stopped',
+        soundEnabled: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ] as Timer[],
+  }),
+})

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TimerViewStatus } from '../../types/timer'
+import type { Timer, TimerViewStatus } from '../../types/timer'
 
 const props = defineProps<{
-  viewStatus?: TimerViewStatus
+  timer: Timer
 }>()
 
-const status = computed<TimerViewStatus>(() => props.viewStatus ?? 'active')
+const status = computed<TimerViewStatus>(() => props.timer.status)
 
 const statusLabel = computed(() => {
   const labels: Record<TimerViewStatus, string> = {
@@ -21,13 +21,18 @@ const statusLabel = computed(() => {
 
 const canStop = computed(() => status.value === 'active')
 const canComplete = computed(() => status.value === 'signal')
+
+const durationMinutes = computed(() => {
+  return Math.round(props.timer.durationSeconds / 60)
+})
 </script>
+
 
 <template>
   <div :class="['row', { highlighted: status === 'signal' }]">
     <div class="name">
       <div class="img"></div>
-      <span>Название таймера</span>
+      <span>{{ timer.title }}</span>
     </div>
 
     <div>
@@ -37,10 +42,10 @@ const canComplete = computed(() => status.value === 'signal')
     </div>
 
     <div class="desc">
-      Какой-то комментарий очень длинный...
+      {{ timer.description }}
     </div>
 
-    <div>100 мин</div>
+    <div>{{ durationMinutes }} мин</div>
 
     <div class="time">
       {{ status === 'signal' || status === 'completed' ? '00:00:00' : '01:35:57' }}
