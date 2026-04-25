@@ -29,21 +29,18 @@ const timersStore = useTimersStore()
 .table {
   background: #eef3f7;
   border-radius: 20px;
-  padding: 16px;
+  padding: 18px 12px 10px;
 }
 
 .header {
   display: grid;
-  grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
-  gap: 12px;
+  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 140px;
+  gap: 18px;
 
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 14px 16px 18px;
 
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
 }
-
 </style>

@@ -14,7 +14,7 @@
 
 /* Центрирование контента */
 .page {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 24px;
 }

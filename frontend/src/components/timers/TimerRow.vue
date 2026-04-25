@@ -45,10 +45,13 @@ watch(viewStatus, (newStatus) => {
 })
 
 const canStop = computed(() => viewStatus.value === 'active')
-const canComplete = computed(() => viewStatus.value === 'signal')
 
 const durationMinutes = computed(() => {
   return Math.round(props.timer.durationSeconds / 60)
+})
+
+const shiftMinutes = computed(() => {
+  return Math.round(props.timer.timeShiftSeconds / 60)
 })
 
 function formatTime(sec: number) {
@@ -99,14 +102,13 @@ function stopTimer() {
   audio.pause()
   audio.currentTime = 0
 }
-
 </script>
 
 <template>
   <div :class="['row', { highlighted: viewStatus === 'signal' }]">
     <div class="name">
       <div class="img"></div>
-      <span>{{ timer.title }}</span>
+      <span :title="timer.title">{{ timer.title }}</span>
     </div>
 
     <div>
@@ -115,7 +117,7 @@ function stopTimer() {
       </span>
     </div>
 
-    <div class="desc">
+    <div class="desc" :title="timer.description">
       {{ timer.description }}
     </div>
 
@@ -128,51 +130,53 @@ function stopTimer() {
     </div>
 
     <div class="last-run">
-      <div>2026-04-25&nbsp;&nbsp;&nbsp;14:30</div>
+      <div class="last-run-main">
+        <span>2026-04-25</span>
+        <span>14:30</span>
+        <span v-if="shiftMinutes > 0" class="shift">
+          delay {{ shiftMinutes }} мин
+        </span>
+      </div>
       <div class="user">Pupok Pupochkov</div>
     </div>
 
-  <div class="actions">
-    <!-- Только для signal -->
-    <button
-      v-if="viewStatus === 'signal'"
-      class="complete-btn"
-      @click="completeTimer"
-    >
-      Завершить
-    </button>
-
-    <!-- Все остальные состояния -->
-    <template v-else>
-      <IconButton title="Перезапустить" @click="openRestartModal">
-        <img :src="restartIcon" alt="restart" />
-      </IconButton>
-
-      <IconButton v-if="canStop" title="Остановить" @click="stopTimer">
-        <img :src="stopIcon" alt="stop" />
-      </IconButton>
-
-      <IconButton
-        :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
-        @click="toggleSound"
+    <div class="actions">
+      <button
+        v-if="viewStatus === 'signal'"
+        class="complete-btn"
+        @click="completeTimer"
       >
-        <img
-          :src="soundEnabled ? volumeOnIcon : volumeOffIcon"
-          alt="sound"
-        />
-      </IconButton>
+        Завершить
+      </button>
 
-      <IconButton title="Редактировать">
-        <img :src="editIcon" alt="edit" />
-      </IconButton>
+      <template v-else>
+        <IconButton title="Перезапустить" @click="openRestartModal">
+          <img :src="restartIcon" alt="restart" />
+        </IconButton>
 
-      <IconButton title="Удалить">
-        <img :src="deleteIcon" alt="delete" />
-      </IconButton>
-    </template>
-  </div>
+        <IconButton v-if="canStop" title="Остановить" @click="stopTimer">
+          <img :src="stopIcon" alt="stop" />
+        </IconButton>
 
+        <IconButton
+          :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
+          @click="toggleSound"
+        >
+          <img
+            :src="soundEnabled ? volumeOnIcon : volumeOffIcon"
+            alt="sound"
+          />
+        </IconButton>
 
+        <IconButton title="Редактировать">
+          <img :src="editIcon" alt="edit" />
+        </IconButton>
+
+        <IconButton title="Удалить">
+          <img :src="deleteIcon" alt="delete" />
+        </IconButton>
+      </template>
+    </div>
   </div>
 
   <RestartTimerModal
@@ -182,20 +186,21 @@ function stopTimer() {
   />
 </template>
 
-
 <style scoped>
 .row {
   display: grid;
-  grid-template-columns: 220px 120px 1fr 120px 120px 200px 180px;
+  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 140px;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
 
   background: white;
   border-radius: 16px;
-  padding: 14px 12px;
+  padding: 18px 16px;
   margin-bottom: 10px;
 
-  min-height: 76px;
+  min-height: 86px;
+  border: 1px solid transparent;
+  font-size: 14px;
 
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
@@ -218,12 +223,19 @@ function stopTimer() {
 }
 
 .name span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .img {
+  flex: 0 0 auto;
   width: 36px;
   height: 36px;
   background: #edf1f5;
@@ -265,15 +277,17 @@ function stopTimer() {
 
 .desc {
   color: #111827;
-  line-height: 1.2;
+  line-height: 1.25;
   min-width: 0;
+  font-size: 14px;
 
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
 
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .time {
@@ -284,7 +298,20 @@ function stopTimer() {
 
 .last-run {
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.last-run-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.shift {
+  color: #9ca3af;
+  font-size: 12px;
 }
 
 .user {
@@ -297,7 +324,7 @@ function stopTimer() {
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-content: flex-start;
+  justify-content: flex-end;
   flex-wrap: nowrap;
 }
 
