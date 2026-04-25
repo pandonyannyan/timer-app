@@ -42,8 +42,10 @@
         <span>Поменять местами</span>
       </button>
 
-      <button class="primary-btn" type="button">
-        + Добавить таймер
+
+      <button class="secondary-btn with-icon" type="button">
+        <img :src="addIcon" alt="add" />
+        <span>Добавить таймер</span>
       </button>
     </div>
   </div>
@@ -52,6 +54,7 @@
 <script setup lang="ts">
 import searchIcon from '../../assets/icons/search.svg'
 import swapIcon from '../../assets/icons/swap.svg'
+import addIcon from '../../assets/icons/add.svg'
 
 defineProps<{
   searchQuery: string
