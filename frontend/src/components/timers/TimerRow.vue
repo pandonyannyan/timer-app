@@ -286,25 +286,29 @@ function stopTimer() {
 .actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-start;
   flex-wrap: nowrap;
 }
 
-/* button {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 18px;
-} */
-
 .complete-btn {
-  min-width: 150px;
-  padding: 10px 16px;
+  min-width: 132px;
+  height: 36px;
+  padding: 0 18px;
+  border: none;
   border-radius: 999px;
   background: #6f89ad;
   color: white;
   font-size: 14px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.complete-btn:hover {
+  background: #5f7a9f;
+}
+
+.complete-btn:active {
+  transform: scale(0.98);
 }
 </style>
