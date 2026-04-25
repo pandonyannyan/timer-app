@@ -1,12 +1,9 @@
 <template>
-  <main class="app">
-    <h1>Timer App</h1>
-    <p>Список таймеров будет здесь</p>
-  </main>
+  <AppLayout>
+    <RouterView />
+  </AppLayout>
 </template>
 
-<style scoped>
-.app {
-  padding: 32px;
-}
-</style>
+<script setup lang="ts">
+import AppLayout from './layouts/AppLayout.vue'
+</script>
