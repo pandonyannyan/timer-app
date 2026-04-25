@@ -182,6 +182,7 @@ completed_signal_timer_ids = []
 
 ```text
 id
+sort_order
 title
 description
 image_url
