@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { Timer } from '../../types/timer'
 import { addCompletedTimer } from '../../utils/completedTimers'
+import { isSoundEnabled, toggleTimerSound } from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
 import beepSound from '../../assets/sounds/beep.mp3'
 
@@ -17,9 +18,10 @@ const {
 
 const audio = new Audio(beepSound)
 const hasPlayedSound = ref(false)
+const soundEnabled = ref(isSoundEnabled(props.timer.id))
 
 watch(viewStatus, (newStatus) => {
-  if (newStatus === 'signal' && props.timer.soundEnabled && !hasPlayedSound.value) {
+  if (newStatus === 'signal' && soundEnabled.value && !hasPlayedSound.value) {
     audio.currentTime = 0
 
     audio.play().catch(() => {
@@ -54,6 +56,15 @@ function completeTimer() {
   audio.currentTime = 0
 
   addCompletedTimer(props.timer.id)
+}
+
+function toggleSound() {
+  soundEnabled.value = toggleTimerSound(props.timer.id)
+
+  if (!soundEnabled.value) {
+    audio.pause()
+    audio.currentTime = 0
+  }
 }
 </script>
 
@@ -96,7 +107,12 @@ function completeTimer() {
 
       <button title="Перезапустить">↻</button>
       <button v-if="canStop" title="Остановить">□</button>
-      <button title="Выключить звук">🔇</button>
+      <button
+         :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
+         @click="toggleSound"
+      >
+        {{ soundEnabled ? '🔊' : '🔇' }}
+      </button>
       <button title="Редактировать">✎</button>
       <button title="Удалить">🗑</button>
     </div>
