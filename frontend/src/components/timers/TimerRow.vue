@@ -197,6 +197,7 @@ function stopTimer() {
 
   <RestartTimerModal
     v-if="showRestartModal"
+    :duration-seconds="timer.durationSeconds"
     @close="showRestartModal = false"
     @submit="handleRestart"
   />

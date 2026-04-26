@@ -32,8 +32,12 @@
           :class="{ invalid: isShiftInvalid }"
         />
 
-        <p v-if="isShiftInvalid" class="error">
+        <p v-if="!isValidMinutesFormat" class="error">
           Введите целое количество минут: 1, 5, 10, 60...
+        </p>
+
+        <p v-else-if="isShiftTooLarge" class="error">
+          Смещение не может быть больше длительности таймера ({{ maxShiftMinutes }} мин)
         </p>
 
         <p class="hint">
@@ -50,7 +54,7 @@
           class="primary-btn"
           type="button"
           :disabled="isSubmitDisabled"
-          :title="isSubmitDisabled ? 'Введите целое количество минут' : 'Запустить таймер'"
+          :title="isSubmitDisabled ? 'Введите корректное смещение' : 'Запустить таймер'"
           @click="submit"
         >
           Запустить
@@ -63,20 +67,41 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+const props = defineProps<{
+  durationSeconds: number
+}>()
+
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'submit', timeShiftSeconds: number): void
 }>()
 
 const mode = ref<'now' | 'shift'>('now')
-const minutesInput = ref('5')
+const minutesInput = ref('1')
 
-const isValidMinutes = computed(() => {
+const maxShiftMinutes = computed(() => {
+  return Math.floor(props.durationSeconds / 60)
+})
+
+const isValidMinutesFormat = computed(() => {
   return /^\d+$/.test(minutesInput.value)
 })
 
+const shiftMinutes = computed(() => {
+  if (!isValidMinutesFormat.value) return 0
+
+  return Number(minutesInput.value)
+})
+
+const isShiftTooLarge = computed(() => {
+  return isValidMinutesFormat.value && shiftMinutes.value > maxShiftMinutes.value
+})
+
 const isShiftInvalid = computed(() => {
-  return mode.value === 'shift' && !isValidMinutes.value
+  return mode.value === 'shift' && (
+    !isValidMinutesFormat.value ||
+    isShiftTooLarge.value
+  )
 })
 
 const isSubmitDisabled = computed(() => {
@@ -88,7 +113,7 @@ function submit() {
 
   const shift =
     mode.value === 'shift'
-      ? Number(minutesInput.value) * 60
+      ? shiftMinutes.value * 60
       : 0
 
   emit('submit', shift)
@@ -231,6 +256,25 @@ function submit() {
   background: #f9fbff;
 }
 
+.shift-input.invalid {
+  border-color: #d8a5a5;
+  background: #fffafa;
+}
+
+.shift-input.invalid:focus {
+  outline: none;
+  border-color: #c98b8b;
+  background: #fffafa;
+}
+
+.error {
+  margin: 6px 0 0;
+
+  color: #b15b5b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .hint {
   margin: 8px 0 0;
   color: #6b7280;
@@ -286,24 +330,5 @@ function submit() {
 
 .primary-btn:disabled:hover {
   background: #6f89ad;
-}
-
-.shift-input.invalid {
-  border-color: #d8a5a5;
-  background: #fffafa;
-}
-
-.shift-input.invalid:focus {
-  outline: none;
-  border-color: #c98b8b;
-  background: #fffafa;
-}
-
-.error {
-  margin: 6px 0 0;
-
-  color: #b15b5b;
-  font-size: 13px;
-  line-height: 1.35;
 }
 </style>
