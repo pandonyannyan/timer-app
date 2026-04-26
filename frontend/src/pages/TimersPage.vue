@@ -36,7 +36,7 @@ const pageOpenedAt = Date.now()
 
 const searchQuery = ref('')
 const statusFilter = ref<StatusFilter>('all')
-const sortBy = ref<SortBy>('title')
+const sortBy = ref<SortBy | null>(null)
 const sortDirection = ref<SortDirection>('asc')
       
 function getRemaining(timer: Timer) {
@@ -92,19 +92,21 @@ const visibleTimers = computed(() => {
     )
   })
   
-  result = [...result].sort((a, b) => {
-    let compare = 0
-    
-    if (sortBy.value === 'title') {
-      compare = a.title.localeCompare(b.title, 'ru')
-    }
-    
-    if (sortBy.value === 'remaining') {
-      compare = getRemaining(a) - getRemaining(b)
-    }
-    
-    return sortDirection.value === 'asc' ? compare : -compare
-  })
+  if (sortBy.value) {
+    result = [...result].sort((a, b) => {
+      let compare = 0
+      
+      if (sortBy.value === 'title') {
+        compare = a.title.localeCompare(b.title, 'ru')
+      }
+      
+      if (sortBy.value === 'remaining') {
+        compare = getRemaining(a) - getRemaining(b)
+      }
+      
+      return sortDirection.value === 'asc' ? compare : -compare
+    })
+  }
   
   return result
 })
@@ -130,5 +132,5 @@ function changeSort(nextSortBy: SortBy) {
   color: #111827;
   font-size: 28px;
   font-weight: 700;
-  }
+}
 </style>
