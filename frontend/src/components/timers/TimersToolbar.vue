@@ -42,19 +42,32 @@
         <span>Поменять местами</span>
       </button>
 
-
-      <button class="secondary-btn with-icon" type="button">
+      <button
+        class="secondary-btn with-icon"
+        type="button"
+        @click="showAddTimerModal = true"
+      >
         <img :src="addIcon" alt="add" />
         <span>Добавить таймер</span>
       </button>
     </div>
   </div>
+
+  <AddTimerModal
+    v-if="showAddTimerModal"
+    @close="showAddTimerModal = false"
+    @submit="handleCreateTimer"
+  />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import searchIcon from '../../assets/icons/search.svg'
 import swapIcon from '../../assets/icons/swap.svg'
 import addIcon from '../../assets/icons/add.svg'
+import AddTimerModal from './AddTimerModal.vue'
+import { useTimersStore } from '../../stores/timers'
+import type { CreateTimerPayload } from '../../types/timer'
 
 defineProps<{
   searchQuery: string
@@ -65,6 +78,14 @@ defineEmits<{
   (e: 'update:searchQuery', value: string): void
   (e: 'update:statusFilter', value: 'all' | 'active'): void
 }>()
+
+const timersStore = useTimersStore()
+const showAddTimerModal = ref(false)
+
+function handleCreateTimer(payload: CreateTimerPayload) {
+  timersStore.createTimer(payload)
+  showAddTimerModal.value = false
+}
 </script>
 
 <style scoped>

@@ -15,3 +15,10 @@ export interface Timer {
   createdAt: string
   updatedAt: string
 }
+
+export interface CreateTimerPayload {
+  title: string
+  description: string
+  durationMinutes: number
+  imageFile: File | null
+}
