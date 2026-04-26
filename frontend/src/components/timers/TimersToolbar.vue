@@ -72,8 +72,9 @@ defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
+  gap: 16px 24px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .toolbar-left,
@@ -81,6 +82,49 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.toolbar-right {
+  flex: 0 0 auto;
+}
+
+.search {
+  width: min(420px, 100%);
+  min-width: 220px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid #6f89ad;
+  border-radius: 999px;
+  background: white;
+  padding: 0 16px;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .search {
+    flex: 1 1 220px;
+  }
+
+  .toolbar-right {
+    justify-content: flex-start;
+  }
 }
 
 .tabs {
@@ -103,19 +147,6 @@ defineEmits<{
 
 .tab.active {
   background: #eef3f7;
-}
-
-.search {
-  width: 420px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  border: 1px solid #6f89ad;
-  border-radius: 999px;
-  background: white;
-  padding: 0 16px;
 }
 
 .search-icon {
