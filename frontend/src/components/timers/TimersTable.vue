@@ -79,6 +79,9 @@ defineEmits<{
 
 <style scoped>
 .table {
+  --timers-grid-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
+  --timers-grid-gap: 18px;
+
   background: #eef3f7;
   border-radius: 20px;
   padding: 18px 12px 10px;
@@ -86,8 +89,8 @@ defineEmits<{
 
 .header {
   display: grid;
-  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
-  gap: 18px;
+  grid-template-columns: var(--timers-grid-columns);
+  gap: var(--timers-grid-gap);
 
   padding: 14px 16px 18px;
 
@@ -95,7 +98,6 @@ defineEmits<{
   font-weight: 500;
   color: #4b5563;
 }
-
 .header-cell {
   display: flex;
   align-items: center;

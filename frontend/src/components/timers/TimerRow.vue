@@ -189,9 +189,9 @@ function stopTimer() {
 <style scoped>
 .row {
   display: grid;
-  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
+  grid-template-columns: var(--timers-grid-columns);
   align-items: center;
-  gap: 18px;
+  gap: var(--timers-grid-gap);
 
   background: white;
   border-radius: 16px;
