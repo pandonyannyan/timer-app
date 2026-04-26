@@ -326,15 +326,25 @@ function stopTimer() {
 }
 
 .actions {
+  --action-button-size: 34px;
+  --action-buttons-count: 5;
+  --action-gap: 6px;
+  --actions-width: calc(
+    var(--action-button-size) * var(--action-buttons-count) +
+    var(--action-gap) * (var(--action-buttons-count) - 1)
+  );
+
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--action-gap);
   justify-content: flex-start;
   flex-wrap: nowrap;
+
+  width: var(--actions-width);
 }
 
 .complete-btn {
-  min-width: 132px;
+  width: 100%;
   height: 36px;
   padding: 0 18px;
   border: none;
