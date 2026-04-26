@@ -204,6 +204,8 @@ function stopTimer() {
 
 <style scoped>
 .row {
+  position: relative;
+
   display: grid;
   grid-template-columns: var(--timers-grid-columns);
   align-items: center;
@@ -218,17 +220,16 @@ function stopTimer() {
   border: 1px solid transparent;
   font-size: 14px;
 
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.row:hover {
-  background: #f8fafc;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .row.highlighted {
-  border: 2px solid #6f89ad;
-  background: #f9fbff;
+  border-color: #cb8d8d;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(203, 141, 141, 0.16);
 }
 
 .name {
