@@ -107,8 +107,19 @@ function stopTimer() {
 <template>
   <div :class="['row', { highlighted: viewStatus === 'signal' }]">
     <div class="name">
-      <div class="img"></div>
-      <span :title="timer.title">{{ timer.title }}</span>
+      <div class="timer-image">
+        <img
+          v-if="timer.imageUrl"
+          :src="timer.imageUrl"
+          :alt="timer.title"
+        >
+
+        <span v-else class="timer-image-placeholder">
+          {{ timer.title.charAt(0).toUpperCase() }}
+        </span>
+      </div>
+
+      <span class="timer-title" :title="timer.title">{{ timer.title }}</span>
     </div>
 
     <div>
@@ -227,7 +238,7 @@ function stopTimer() {
   min-width: 0;
 }
 
-.name span {
+.timer-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -239,12 +250,33 @@ function stopTimer() {
   line-height: 1.25;
 }
 
-.img {
+.timer-image {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
   background: #edf1f5;
-  border-radius: 6px;
+  overflow: hidden;
+}
+
+.timer-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+.timer-image-placeholder {
+  color: #6f89ad;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .status {
