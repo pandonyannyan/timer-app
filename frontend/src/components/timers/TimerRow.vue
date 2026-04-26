@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { Timer } from '../../types/timer'
+import type { Timer, TimerFormPayload } from '../../types/timer'
 import { addCompletedTimer } from '../../utils/completedTimers'
 import { isSoundEnabled, toggleTimerSound } from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
 import beepSound from '../../assets/sounds/beep.mp3'
 import { useTimersStore } from '../../stores/timers'
 import RestartTimerModal from './RestartTimerModal.vue'
+import AddTimerModal from './AddTimerModal.vue'
 import IconButton from '../ui/IconButton.vue'
 import restartIcon from '../../assets/icons/restart.svg'
 import stopIcon from '../../assets/icons/stop.svg'
@@ -21,6 +22,7 @@ const props = defineProps<{
 
 const timersStore = useTimersStore()
 const showRestartModal = ref(false)
+const showEditModal = ref(false)
 
 const {
   remaining,
@@ -101,6 +103,16 @@ function stopTimer() {
 
   audio.pause()
   audio.currentTime = 0
+}
+
+function openEditModal() {
+  showEditModal.value = true
+}
+
+function handleUpdateTimer(payload: TimerFormPayload) {
+  timersStore.updateTimer(props.timer.id, payload)
+
+  showEditModal.value = false
 }
 </script>
 
@@ -184,7 +196,7 @@ function stopTimer() {
           />
         </IconButton>
 
-        <IconButton title="Редактировать">
+        <IconButton title="Редактировать" @click="openEditModal">
           <img :src="editIcon" alt="edit" />
         </IconButton>
 
@@ -200,6 +212,14 @@ function stopTimer() {
     :duration-seconds="timer.durationSeconds"
     @close="showRestartModal = false"
     @submit="handleRestart"
+  />
+
+  <AddTimerModal
+    v-if="showEditModal"
+    mode="edit"
+    :timer="timer"
+    @close="showEditModal = false"
+    @submit="handleUpdateTimer"
   />
 </template>
 

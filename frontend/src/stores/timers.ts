@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { CreateTimerPayload, Timer } from '../types/timer'
+import type { Timer, TimerFormPayload } from '../types/timer'
 import { removeCompletedTimer } from '../utils/completedTimers'
 
 import timerImage1 from '../assets/timer-images/img1.jpg'
@@ -79,7 +79,7 @@ export const useTimersStore = defineStore('timers', {
   }),
 
   actions: {
-    createTimer(payload: CreateTimerPayload) {
+    createTimer(payload: TimerFormPayload) {
       const now = new Date().toISOString()
 
       const imageUrl = payload.imageFile
@@ -103,6 +103,20 @@ export const useTimersStore = defineStore('timers', {
       this.timers.unshift(timer)
     },
 
+    updateTimer(timerId: string, payload: TimerFormPayload) {
+      const timer = this.timers.find(t => t.id === timerId)
+      if (!timer) return
+
+      timer.title = payload.title
+      timer.description = payload.description
+      timer.durationSeconds = payload.durationMinutes * 60
+      timer.updatedAt = new Date().toISOString()
+
+      if (payload.imageFile) {
+        timer.imageUrl = URL.createObjectURL(payload.imageFile)
+      }
+    },
+
     restartTimer(timerId: string, timeShiftSeconds = 0) {
       const timer = this.timers.find(t => t.id === timerId)
       if (!timer) return
@@ -112,6 +126,7 @@ export const useTimersStore = defineStore('timers', {
       timer.timeShiftSeconds = timeShiftSeconds
       timer.updatedAt = new Date().toISOString()
 
+      // сбрасываем локальный completed
       removeCompletedTimer(timerId)
     },
 

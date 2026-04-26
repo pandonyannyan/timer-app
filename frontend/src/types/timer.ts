@@ -16,7 +16,7 @@ export interface Timer {
   updatedAt: string
 }
 
-export interface CreateTimerPayload {
+export interface TimerFormPayload {
   title: string
   description: string
   durationMinutes: number

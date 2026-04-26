@@ -67,7 +67,7 @@ import swapIcon from '../../assets/icons/swap.svg'
 import addIcon from '../../assets/icons/add.svg'
 import AddTimerModal from './AddTimerModal.vue'
 import { useTimersStore } from '../../stores/timers'
-import type { CreateTimerPayload } from '../../types/timer'
+import type { TimerFormPayload } from '../../types/timer'
 
 defineProps<{
   searchQuery: string
@@ -82,7 +82,7 @@ defineEmits<{
 const timersStore = useTimersStore()
 const showAddTimerModal = ref(false)
 
-function handleCreateTimer(payload: CreateTimerPayload) {
+function handleCreateTimer(payload: TimerFormPayload) {
   timersStore.createTimer(payload)
   showAddTimerModal.value = false
 }

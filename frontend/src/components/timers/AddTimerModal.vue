@@ -2,7 +2,7 @@
   <div class="overlay" @click.self="$emit('close')">
     <div class="modal">
       <div class="modal-header">
-        <h2>Добавить таймер</h2>
+        <h2>{{ modalTitle }}</h2>
 
         <button class="close-btn" type="button" @click="$emit('close')">
           ×
@@ -37,13 +37,13 @@
             id="timer-description"
             v-model="description"
             class="field-textarea"
-            placeholder="Комментарии и дополнительная информация"
+            placeholder="Комментарий, детали, инструкция"
           />
         </div>
 
         <div class="field">
           <label class="field-label" for="timer-duration">
-            Длительность таймера (минут)
+            Длительность таймера, минут
           </label>
 
           <input
@@ -108,20 +108,45 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { CreateTimerPayload } from '../../types/timer'
+import type { Timer, TimerFormPayload } from '../../types/timer'
+
+const props = withDefaults(defineProps<{
+  mode?: 'create' | 'edit'
+  timer?: Timer
+}>(), {
+  mode: 'create',
+  timer: undefined,
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'submit', payload: CreateTimerPayload): void
+  (e: 'submit', payload: TimerFormPayload): void
 }>()
 
-const title = ref('')
-const description = ref('')
-const durationInput = ref('5')
+const title = ref(props.timer?.title ?? '')
+const description = ref(props.timer?.description ?? '')
+const durationInput = ref(
+  props.timer
+    ? String(Math.round(props.timer.durationSeconds / 60))
+    : '5'
+)
 const imageFile = ref<File | null>(null)
 
-const trimmedTitle = computed(() => title.value.trim())
-const trimmedDescription = computed(() => description.value.trim())
+const isEditMode = computed(() => {
+  return props.mode === 'edit'
+})
+
+const modalTitle = computed(() => {
+  return isEditMode.value ? 'Редактировать таймер' : 'Добавить таймер'
+})
+
+const trimmedTitle = computed(() => {
+  return title.value.trim()
+})
+
+const trimmedDescription = computed(() => {
+  return description.value.trim()
+})
 
 const isTitleInvalid = computed(() => {
   return trimmedTitle.value.length === 0
@@ -150,7 +175,10 @@ const isSubmitDisabled = computed(() => {
 })
 
 const imageFileName = computed(() => {
-  return imageFile.value?.name ?? 'Файл не выбран'
+  if (imageFile.value) return imageFile.value.name
+  if (props.timer?.imageUrl) return 'Текущее изображение'
+
+  return 'Файл не выбран'
 })
 
 function handleImageChange(event: Event) {
