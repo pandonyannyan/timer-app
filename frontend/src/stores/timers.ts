@@ -117,6 +117,13 @@ export const useTimersStore = defineStore('timers', {
       }
     },
 
+    deleteTimer(timerId: string) {
+      this.timers = this.timers.filter(t => t.id !== timerId)
+
+      // чистим локальный completed, если таймер был завершён пользователем
+      removeCompletedTimer(timerId)
+    },
+
     restartTimer(timerId: string, timeShiftSeconds = 0) {
       const timer = this.timers.find(t => t.id === timerId)
       if (!timer) return

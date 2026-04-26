@@ -8,6 +8,7 @@ import beepSound from '../../assets/sounds/beep.mp3'
 import { useTimersStore } from '../../stores/timers'
 import RestartTimerModal from './RestartTimerModal.vue'
 import AddTimerModal from './AddTimerModal.vue'
+import ConfirmDeleteModal from './ConfirmDeleteModal.vue'
 import IconButton from '../ui/IconButton.vue'
 import restartIcon from '../../assets/icons/restart.svg'
 import stopIcon from '../../assets/icons/stop.svg'
@@ -23,6 +24,7 @@ const props = defineProps<{
 const timersStore = useTimersStore()
 const showRestartModal = ref(false)
 const showEditModal = ref(false)
+const showDeleteModal = ref(false)
 
 const {
   remaining,
@@ -114,6 +116,19 @@ function handleUpdateTimer(payload: TimerFormPayload) {
 
   showEditModal.value = false
 }
+
+function openDeleteModal() {
+  showDeleteModal.value = true
+}
+
+function handleDeleteTimer() {
+  audio.pause()
+  audio.currentTime = 0
+
+  timersStore.deleteTimer(props.timer.id)
+
+  showDeleteModal.value = false
+}
 </script>
 
 <template>
@@ -200,7 +215,7 @@ function handleUpdateTimer(payload: TimerFormPayload) {
           <img :src="editIcon" alt="edit" />
         </IconButton>
 
-        <IconButton title="Удалить">
+        <IconButton title="Удалить" @click="openDeleteModal">
           <img :src="deleteIcon" alt="delete" />
         </IconButton>
       </template>
@@ -221,11 +236,18 @@ function handleUpdateTimer(payload: TimerFormPayload) {
     @close="showEditModal = false"
     @submit="handleUpdateTimer"
   />
+
+  <ConfirmDeleteModal
+    v-if="showDeleteModal"
+    :timer-title="timer.title"
+    @close="showDeleteModal = false"
+    @confirm="handleDeleteTimer"
+  />
 </template>
 
 <style scoped>
 .row {
-   position: relative;
+  position: relative;
 
   display: grid;
   grid-template-columns: var(--timers-grid-columns);
@@ -240,7 +262,6 @@ function handleUpdateTimer(payload: TimerFormPayload) {
   min-height: 86px;
   border: 1px solid transparent;
   font-size: 14px;
-
 
   transition:
     background 0.15s ease,
