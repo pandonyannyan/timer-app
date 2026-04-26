@@ -189,7 +189,7 @@ function stopTimer() {
 <style scoped>
 .row {
   display: grid;
-  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 140px;
+  grid-template-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px minmax(180px, 190px);
   align-items: center;
   gap: 18px;
 
@@ -324,7 +324,7 @@ function stopTimer() {
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: nowrap;
 }
 
