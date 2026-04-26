@@ -1,5 +1,5 @@
 <template>
-  <div class="table">
+  <div :class="['table', { 'table--reorder': isReorderMode }]">
     <div class="header">
       <div class="header-cell header-cell--sortable">
         <span>Название</span>
@@ -10,6 +10,7 @@
           type="button"
           title="Сортировать по названию"
           aria-label="Сортировать по названию"
+          :disabled="isReorderMode"
           @click="$emit('changeSort', 'title')"
         >
           <img
@@ -34,6 +35,7 @@
           type="button"
           title="Сортировать по оставшемуся времени"
           aria-label="Сортировать по оставшемуся времени"
+          :disabled="isReorderMode"
           @click="$emit('changeSort', 'remaining')"
         >
           <img
@@ -49,11 +51,28 @@
       <div class="header-cell header-cell--actions">Действия</div>
     </div>
 
-    <TimerRow
-      v-for="timer in timers"
+    <div
+      v-for="(timer, index) in timers"
       :key="timer.id"
-      :timer="timer"
-    />
+      :class="[
+        'row-wrapper',
+        {
+          'row-wrapper--reorder': isReorderMode,
+          'row-wrapper--dragging': draggedIndex === index,
+        },
+      ]"
+      :draggable="isReorderMode"
+      @dragstart="handleDragStart(index)"
+      @dragover.prevent
+      @dragenter.prevent
+      @drop="handleDrop(index)"
+      @dragend="handleDragEnd"
+    >
+      <TimerRow
+        :timer="timer"
+        :is-reorder-mode="isReorderMode"
+      />
+    </div>
 
     <div v-if="timers.length === 0" class="empty">
       Таймеры не найдены
@@ -62,19 +81,49 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import TimerRow from './TimerRow.vue'
 import sortIcon from '../../assets/icons/sort.svg'
 import type { Timer } from '../../types/timer'
 
-defineProps<{
+const props = defineProps<{
   timers: Timer[]
   sortBy: 'title' | 'remaining' | null
   sortDirection: 'asc' | 'desc'
+  isReorderMode: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'changeSort', value: 'title' | 'remaining'): void
+  (e: 'reorder', value: Timer[]): void
 }>()
+
+const draggedIndex = ref<number | null>(null)
+
+function handleDragStart(index: number) {
+  if (!props.isReorderMode) return
+
+  draggedIndex.value = index
+}
+
+function handleDrop(targetIndex: number) {
+  if (!props.isReorderMode) return
+  if (draggedIndex.value === null) return
+  if (draggedIndex.value === targetIndex) return
+
+  const nextTimers = [...props.timers]
+  const [movedTimer] = nextTimers.splice(draggedIndex.value, 1)
+
+  nextTimers.splice(targetIndex, 0, movedTimer)
+
+  emit('reorder', nextTimers)
+
+  draggedIndex.value = null
+}
+
+function handleDragEnd() {
+  draggedIndex.value = null
+}
 </script>
 
 <style scoped>
@@ -85,6 +134,10 @@ defineEmits<{
   background: #eef3f7;
   border-radius: 20px;
   padding: 18px 12px 10px;
+}
+
+.table--reorder {
+  box-shadow: 0 0 0 2px rgba(111, 137, 173, 0.25);
 }
 
 .header {
@@ -113,6 +166,26 @@ defineEmits<{
 
 .header-cell--actions {
   justify-content: flex-start;
+}
+
+.row-wrapper {
+  border-radius: 16px;
+}
+
+.row-wrapper--reorder {
+  cursor: grab;
+}
+
+.row-wrapper--reorder:active {
+  cursor: grabbing;
+}
+
+.row-wrapper--reorder :deep(.row) {
+  cursor: grab;
+}
+
+.row-wrapper--dragging {
+  opacity: 0.45;
 }
 
 .sort-button {
@@ -154,6 +227,16 @@ defineEmits<{
 .sort-button--active {
   background: #eef3f7;
   border-color: #d5dde8;
+}
+
+.sort-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sort-button:disabled:hover {
+  background: transparent;
+  border-color: transparent;
 }
 
 .sort-icon {

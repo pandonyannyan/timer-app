@@ -18,9 +18,12 @@ import volumeOffIcon from '../../assets/icons/volume-off.svg'
 import editIcon from '../../assets/icons/edit.svg'
 import deleteIcon from '../../assets/icons/delete.svg'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   timer: Timer
-}>()
+  isReorderMode?: boolean
+}>(), {
+  isReorderMode: false,
+})
 
 const timersStore = useTimersStore()
 const showRestartModal = ref(false)
@@ -64,6 +67,27 @@ const shiftMinutes = computed(() => {
   return Math.round(props.timer.timeShiftSeconds / 60)
 })
 
+const stopButtonTitle = computed(() => {
+  if (props.isReorderMode) return 'Сначала сохраните порядок'
+  if (!canStop.value) return 'Остановить можно только активный таймер'
+
+  return 'Остановить'
+})
+
+const editButtonTitle = computed(() => {
+  if (props.isReorderMode) return 'Сначала сохраните порядок'
+  if (!canEditTimer.value) return 'Недостаточно прав'
+
+  return 'Редактировать'
+})
+
+const deleteButtonTitle = computed(() => {
+  if (props.isReorderMode) return 'Сначала сохраните порядок'
+  if (!canDeleteTimer.value) return 'Недостаточно прав'
+
+  return 'Удалить'
+})
+
 function formatTime(sec: number) {
   const s = Math.max(sec, 0)
 
@@ -77,6 +101,8 @@ function formatTime(sec: number) {
 }
 
 function completeTimer() {
+  if (props.isReorderMode) return
+
   audio.pause()
   audio.currentTime = 0
 
@@ -84,6 +110,8 @@ function completeTimer() {
 }
 
 function toggleSound() {
+  if (props.isReorderMode) return
+
   soundEnabled.value = toggleTimerSound(props.timer.id)
 
   if (!soundEnabled.value) {
@@ -93,6 +121,8 @@ function toggleSound() {
 }
 
 function openRestartModal() {
+  if (props.isReorderMode) return
+
   showRestartModal.value = true
 }
 
@@ -107,6 +137,8 @@ function handleRestart(timeShiftSeconds: number) {
 }
 
 function stopTimer() {
+  if (props.isReorderMode) return
+
   timersStore.stopTimer(props.timer.id)
 
   audio.pause()
@@ -114,6 +146,7 @@ function stopTimer() {
 }
 
 function openEditModal() {
+  if (props.isReorderMode) return
   if (!canEditTimer.value) return
 
   showEditModal.value = true
@@ -126,6 +159,7 @@ function handleUpdateTimer(payload: TimerFormPayload) {
 }
 
 function openDeleteModal() {
+  if (props.isReorderMode) return
   if (!canDeleteTimer.value) return
 
   showDeleteModal.value = true
@@ -192,27 +226,34 @@ function handleDeleteTimer() {
       <button
         v-if="viewStatus === 'signal'"
         class="complete-btn"
+        :disabled="isReorderMode"
+        :title="isReorderMode ? 'Сначала сохраните порядок' : 'Завершить'"
         @click="completeTimer"
       >
         Завершить
       </button>
 
       <template v-else>
-        <IconButton title="Перезапустить" @click="openRestartModal">
+        <IconButton
+          title="Перезапустить"
+          :disabled="isReorderMode"
+          @click="openRestartModal"
+        >
           <img :src="restartIcon" alt="restart" />
         </IconButton>
 
         <IconButton
           class="action-button"
-          :disabled="!canStop"
-          :title="canStop ? 'Остановить' : 'Остановить можно только активный таймер'"
+          :disabled="isReorderMode || !canStop"
+          :title="stopButtonTitle"
           @click="stopTimer"
         >
           <img :src="stopIcon" alt="stop" />
         </IconButton>
 
         <IconButton
-          :title="soundEnabled ? 'Выключить звук' : 'Включить звук'"
+          :disabled="isReorderMode"
+          :title="isReorderMode ? 'Сначала сохраните порядок' : soundEnabled ? 'Выключить звук' : 'Включить звук'"
           @click="toggleSound"
         >
           <img
@@ -222,16 +263,16 @@ function handleDeleteTimer() {
         </IconButton>
 
         <IconButton
-          :disabled="!canEditTimer"
-          :title="canEditTimer ? 'Редактировать' : 'Недостаточно прав'"
+          :disabled="isReorderMode || !canEditTimer"
+          :title="editButtonTitle"
           @click="openEditModal"
         >
           <img :src="editIcon" alt="edit" />
         </IconButton>
 
         <IconButton
-          :disabled="!canDeleteTimer"
-          :title="canDeleteTimer ? 'Удалить' : 'Недостаточно прав'"
+          :disabled="isReorderMode || !canDeleteTimer"
+          :title="deleteButtonTitle"
           @click="openDeleteModal"
         >
           <img :src="deleteIcon" alt="delete" />
@@ -459,7 +500,18 @@ function handleDeleteTimer() {
   background: #5f7a9f;
 }
 
-.complete-btn:active {
+.complete-btn:active:not(:disabled) {
   transform: scale(0.98);
+}
+
+.complete-btn:disabled {
+  background: #6f89ad;
+  color: #ffffff;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.complete-btn:disabled:hover {
+  background: #6f89ad;
 }
 </style>

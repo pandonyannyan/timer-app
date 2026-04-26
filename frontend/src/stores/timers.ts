@@ -20,6 +20,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
         status: 'active',
         soundEnabled: true,
+        sortOrder: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -33,6 +34,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: new Date().toISOString(),
         status: 'active',
         soundEnabled: true,
+        sortOrder: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -46,6 +48,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
         status: 'stopped',
         soundEnabled: false,
+        sortOrder: 3,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -59,6 +62,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: new Date(Date.now() - 1000 * 60).toISOString(),
         status: 'active',
         soundEnabled: false,
+        sortOrder: 4,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -72,6 +76,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: new Date().toISOString(),
         status: 'stopped',
         soundEnabled: false,
+        sortOrder: 5,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -86,6 +91,10 @@ export const useTimersStore = defineStore('timers', {
         ? URL.createObjectURL(payload.imageFile)
         : undefined
 
+      const minSortOrder = this.timers.length
+        ? Math.min(...this.timers.map(timer => timer.sortOrder))
+        : 1
+
       const timer: Timer = {
         id: crypto.randomUUID(),
         title: payload.title,
@@ -96,6 +105,7 @@ export const useTimersStore = defineStore('timers', {
         startedAt: now,
         status: 'active',
         soundEnabled: true,
+        sortOrder: minSortOrder - 1,
         createdAt: now,
         updatedAt: now,
       }
@@ -120,8 +130,25 @@ export const useTimersStore = defineStore('timers', {
     deleteTimer(timerId: string) {
       this.timers = this.timers.filter(t => t.id !== timerId)
 
-      // чистим локальный completed, если таймер был завершён пользователем
       removeCompletedTimer(timerId)
+    },
+
+    reorderTimers(timerIds: string[]) {
+      const now = new Date().toISOString()
+      const orderMap = new Map(
+        timerIds.map((timerId, index) => [timerId, index + 1])
+      )
+
+      this.timers.forEach(timer => {
+        const nextSortOrder = orderMap.get(timer.id)
+
+        if (!nextSortOrder) return
+
+        timer.sortOrder = nextSortOrder
+        timer.updatedAt = now
+      })
+
+      this.timers.sort((a, b) => a.sortOrder - b.sortOrder)
     },
 
     restartTimer(timerId: string, timeShiftSeconds = 0) {
@@ -133,7 +160,6 @@ export const useTimersStore = defineStore('timers', {
       timer.timeShiftSeconds = timeShiftSeconds
       timer.updatedAt = new Date().toISOString()
 
-      // сбрасываем локальный completed
       removeCompletedTimer(timerId)
     },
 

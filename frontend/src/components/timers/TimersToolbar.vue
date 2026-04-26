@@ -5,6 +5,7 @@
         <button
           :class="['tab', { active: statusFilter === 'all' }]"
           type="button"
+          :disabled="isReorderMode"
           @click="$emit('update:statusFilter', 'all')"
         >
           Все
@@ -13,19 +14,21 @@
         <button
           :class="['tab', { active: statusFilter === 'active' }]"
           type="button"
+          :disabled="isReorderMode"
           @click="$emit('update:statusFilter', 'active')"
         >
           Активные
         </button>
       </div>
 
-      <div class="search">
+      <div :class="['search', { disabled: isReorderMode }]">
         <img class="search-icon" :src="searchIcon" alt="search" />
 
         <input
           :value="searchQuery"
           type="text"
           placeholder="Поиск"
+          :disabled="isReorderMode"
           @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
         />
       </div>
@@ -36,17 +39,18 @@
         class="secondary-btn with-icon"
         type="button"
         :disabled="!canReorderTimers"
-        :title="canReorderTimers ? 'Поменять местами' : 'Недостаточно прав'"
+        :title="canReorderTimers ? reorderButtonTitle : 'Недостаточно прав'"
+        @click="$emit('toggleReorder')"
       >
         <img :src="swapIcon" alt="swap" />
-        <span>Поменять местами</span>
+        <span>{{ isReorderMode ? 'Сохранить порядок' : 'Поменять местами' }}</span>
       </button>
 
       <button
         class="secondary-btn with-icon"
         type="button"
-        :disabled="!canCreateTimer"
-        :title="canCreateTimer ? 'Добавить таймер' : 'Недостаточно прав'"
+        :disabled="!canCreateTimer || isReorderMode"
+        :title="addButtonTitle"
         @click="openAddTimerModal"
       >
         <img :src="addIcon" alt="add" />
@@ -63,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import searchIcon from '../../assets/icons/search.svg'
 import swapIcon from '../../assets/icons/swap.svg'
 import addIcon from '../../assets/icons/add.svg'
@@ -72,14 +76,16 @@ import { useTimersStore } from '../../stores/timers'
 import { usePermissions } from '../../composables/usePermissions'
 import type { TimerFormPayload } from '../../types/timer'
 
-defineProps<{
+const props = defineProps<{
   searchQuery: string
   statusFilter: 'all' | 'active'
+  isReorderMode: boolean
 }>()
 
 defineEmits<{
   (e: 'update:searchQuery', value: string): void
   (e: 'update:statusFilter', value: 'all' | 'active'): void
+  (e: 'toggleReorder'): void
 }>()
 
 const timersStore = useTimersStore()
@@ -90,8 +96,19 @@ const {
   canReorderTimers,
 } = usePermissions()
 
+const reorderButtonTitle = computed(() => {
+  return props.isReorderMode ? 'Сохранить порядок таймеров' : 'Поменять таймеры местами'
+})
+
+const addButtonTitle = computed(() => {
+  if (!canCreateTimer.value) return 'Недостаточно прав'
+  if (props.isReorderMode) return 'Сначала сохраните порядок'
+
+  return 'Добавить таймер'
+})
+
 function openAddTimerModal() {
-  if (!canCreateTimer.value) return
+  if (!canCreateTimer.value || props.isReorderMode) return
 
   showAddTimerModal.value = true
 }
@@ -143,6 +160,10 @@ function handleCreateTimer(payload: TimerFormPayload) {
   padding: 0 16px;
 }
 
+.search.disabled {
+  opacity: 0.55;
+}
+
 @media (max-width: 768px) {
   .toolbar {
     align-items: stretch;
@@ -184,6 +205,11 @@ function handleCreateTimer(payload: TimerFormPayload) {
   background: #eef3f7;
 }
 
+.tab:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .search-icon {
   width: 18px;
   height: 18px;
@@ -196,6 +222,10 @@ function handleCreateTimer(payload: TimerFormPayload) {
   outline: none;
   background: transparent;
   font-size: 14px;
+}
+
+.search input:disabled {
+  cursor: not-allowed;
 }
 
 .secondary-btn,
