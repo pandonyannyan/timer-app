@@ -26,10 +26,15 @@
         <input
           id="shift-minutes"
           class="shift-input"
-          type="number"
-          v-model.number="minutes"
-          min="0"
+          type="text"
+          inputmode="numeric"
+          v-model="minutesInput"
+          :class="{ invalid: isShiftInvalid }"
         />
+
+        <p v-if="isShiftInvalid" class="error">
+          Введите целое количество минут: 1, 5, 10, 60...
+        </p>
 
         <p class="hint">
           Базовая длительность таймера будет уменьшена на указанное значение
@@ -41,7 +46,13 @@
           Отмена
         </button>
 
-        <button class="primary-btn" type="button" @click="submit">
+        <button
+          class="primary-btn"
+          type="button"
+          :disabled="isSubmitDisabled"
+          :title="isSubmitDisabled ? 'Введите целое количество минут' : 'Запустить таймер'"
+          @click="submit"
+        >
           Запустить
         </button>
       </div>
@@ -50,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -58,10 +69,28 @@ const emit = defineEmits<{
 }>()
 
 const mode = ref<'now' | 'shift'>('now')
-const minutes = ref(5)
+const minutesInput = ref('5')
+
+const isValidMinutes = computed(() => {
+  return /^\d+$/.test(minutesInput.value)
+})
+
+const isShiftInvalid = computed(() => {
+  return mode.value === 'shift' && !isValidMinutes.value
+})
+
+const isSubmitDisabled = computed(() => {
+  return isShiftInvalid.value
+})
 
 function submit() {
-  const shift = mode.value === 'shift' ? Math.max(minutes.value, 0) * 60 : 0
+  if (isSubmitDisabled.value) return
+
+  const shift =
+    mode.value === 'shift'
+      ? Number(minutesInput.value) * 60
+      : 0
+
   emit('submit', shift)
 }
 </script>
@@ -166,6 +195,11 @@ function submit() {
 }
 
 .shift-input {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    outline-color 0.15s ease;
+
   width: 100%;
   height: 44px;
 
@@ -192,8 +226,9 @@ function submit() {
 }
 
 .shift-input:focus {
-  outline: 2px solid #6f89ad;
-  outline-offset: 2px;
+  outline: none;
+  border-color: #6f89ad;
+  background: #f9fbff;
 }
 
 .hint {
@@ -236,5 +271,39 @@ function submit() {
 
 .primary-btn:hover {
   background: #5f7a9f;
+}
+
+.primary-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.primary-btn:disabled {
+  background: #6f89ad;
+  color: #ffffff;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary-btn:disabled:hover {
+  background: #6f89ad;
+}
+
+.shift-input.invalid {
+  border-color: #d8a5a5;
+  background: #fffafa;
+}
+
+.shift-input.invalid:focus {
+  outline: none;
+  border-color: #c98b8b;
+  background: #fffafa;
+}
+
+.error {
+  margin: 6px 0 0;
+
+  color: #b15b5b;
+  font-size: 13px;
+  line-height: 1.35;
 }
 </style>
