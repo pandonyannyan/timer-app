@@ -35,8 +35,8 @@
       <button
         class="secondary-btn with-icon"
         type="button"
-        disabled
-        title="Будет доступно только для admin после подключения ролей"
+        :disabled="!canReorderTimers"
+        :title="canReorderTimers ? 'Поменять местами' : 'Недостаточно прав'"
       >
         <img :src="swapIcon" alt="swap" />
         <span>Поменять местами</span>
@@ -45,7 +45,9 @@
       <button
         class="secondary-btn with-icon"
         type="button"
-        @click="showAddTimerModal = true"
+        :disabled="!canCreateTimer"
+        :title="canCreateTimer ? 'Добавить таймер' : 'Недостаточно прав'"
+        @click="openAddTimerModal"
       >
         <img :src="addIcon" alt="add" />
         <span>Добавить таймер</span>
@@ -67,6 +69,7 @@ import swapIcon from '../../assets/icons/swap.svg'
 import addIcon from '../../assets/icons/add.svg'
 import AddTimerModal from './AddTimerModal.vue'
 import { useTimersStore } from '../../stores/timers'
+import { usePermissions } from '../../composables/usePermissions'
 import type { TimerFormPayload } from '../../types/timer'
 
 defineProps<{
@@ -81,6 +84,17 @@ defineEmits<{
 
 const timersStore = useTimersStore()
 const showAddTimerModal = ref(false)
+
+const {
+  canCreateTimer,
+  canReorderTimers,
+} = usePermissions()
+
+function openAddTimerModal() {
+  if (!canCreateTimer.value) return
+
+  showAddTimerModal.value = true
+}
 
 function handleCreateTimer(payload: TimerFormPayload) {
   timersStore.createTimer(payload)

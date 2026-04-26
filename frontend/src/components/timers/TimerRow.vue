@@ -4,6 +4,7 @@ import type { Timer, TimerFormPayload } from '../../types/timer'
 import { addCompletedTimer } from '../../utils/completedTimers'
 import { isSoundEnabled, toggleTimerSound } from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
+import { usePermissions } from '../../composables/usePermissions'
 import beepSound from '../../assets/sounds/beep.mp3'
 import { useTimersStore } from '../../stores/timers'
 import RestartTimerModal from './RestartTimerModal.vue'
@@ -25,6 +26,11 @@ const timersStore = useTimersStore()
 const showRestartModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
+
+const {
+  canEditTimer,
+  canDeleteTimer,
+} = usePermissions()
 
 const {
   remaining,
@@ -108,6 +114,8 @@ function stopTimer() {
 }
 
 function openEditModal() {
+  if (!canEditTimer.value) return
+
   showEditModal.value = true
 }
 
@@ -118,6 +126,8 @@ function handleUpdateTimer(payload: TimerFormPayload) {
 }
 
 function openDeleteModal() {
+  if (!canDeleteTimer.value) return
+
   showDeleteModal.value = true
 }
 
@@ -211,11 +221,19 @@ function handleDeleteTimer() {
           />
         </IconButton>
 
-        <IconButton title="Редактировать" @click="openEditModal">
+        <IconButton
+          :disabled="!canEditTimer"
+          :title="canEditTimer ? 'Редактировать' : 'Недостаточно прав'"
+          @click="openEditModal"
+        >
           <img :src="editIcon" alt="edit" />
         </IconButton>
 
-        <IconButton title="Удалить" @click="openDeleteModal">
+        <IconButton
+          :disabled="!canDeleteTimer"
+          :title="canDeleteTimer ? 'Удалить' : 'Недостаточно прав'"
+          @click="openDeleteModal"
+        >
           <img :src="deleteIcon" alt="delete" />
         </IconButton>
       </template>
