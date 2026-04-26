@@ -293,7 +293,7 @@ function stopTimer() {
 .time {
   font-weight: 700;
   font-size: 16px;
-  text-align: center;
+  text-align: flex-start;
 }
 
 .last-run {
