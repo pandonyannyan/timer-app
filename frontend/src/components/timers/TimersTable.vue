@@ -109,7 +109,7 @@ defineEmits<{
 }
 
 .header-cell--actions {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .sort-button {
