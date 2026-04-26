@@ -1,5 +1,10 @@
 <template>
-  <button class="icon-button" :title="title" type="button">
+  <button
+  class="icon-button"
+  :title="title"
+  :disabled="disabled"
+  type="button"
+  >
     <span class="icon">
       <slot />
     </span>
@@ -9,6 +14,7 @@
 <script setup lang="ts">
 defineProps<{
   title: string
+  disabled?: boolean
 }>()
 </script>
 
@@ -35,6 +41,20 @@ defineProps<{
 .icon-button:hover {
   background: #eef3f7;
   border-color: #d5dde8;
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-button:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.icon-button:disabled:active {
+  transform: none;
 }
 
 .icon-button:active {

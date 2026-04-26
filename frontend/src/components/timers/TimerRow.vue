@@ -154,7 +154,12 @@ function stopTimer() {
           <img :src="restartIcon" alt="restart" />
         </IconButton>
 
-        <IconButton v-if="canStop" title="Остановить" @click="stopTimer">
+        <IconButton
+          class="action-button"
+          :disabled="!canStop"
+          :title="canStop ? 'Остановить' : 'Остановить можно только активный таймер'"
+          @click="stopTimer"
+        >
           <img :src="stopIcon" alt="stop" />
         </IconButton>
 
@@ -293,7 +298,7 @@ function stopTimer() {
 .time {
   font-weight: 700;
   font-size: 16px;
-  text-align: flex-start;
+  text-align: left;
 }
 
 .last-run {

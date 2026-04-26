@@ -98,6 +98,7 @@ defineEmits<{
   font-weight: 500;
   color: #4b5563;
 }
+
 .header-cell {
   display: flex;
   align-items: center;
