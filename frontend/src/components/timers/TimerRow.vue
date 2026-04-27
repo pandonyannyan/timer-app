@@ -2,7 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import type { Timer, TimerFormPayload } from '../../types/timer'
 import { addCompletedTimer } from '../../utils/completedTimers'
-import { isSoundEnabled, toggleTimerSound } from '../../utils/soundSettings'
+import {
+  globalSoundEnabled,
+  isSoundEnabled,
+  toggleTimerSound,
+} from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
 import { usePermissions } from '../../composables/usePermissions'
 import beepSound from '../../assets/sounds/beep.mp3'
@@ -45,16 +49,52 @@ const audio = new Audio(beepSound)
 const hasPlayedSound = ref(false)
 const soundEnabled = ref(isSoundEnabled(props.timer.id))
 
-watch(viewStatus, (newStatus) => {
-  if (newStatus === 'signal' && soundEnabled.value && !hasPlayedSound.value) {
-    audio.currentTime = 0
+const effectiveSoundEnabled = computed(() => {
+  return globalSoundEnabled.value && soundEnabled.value
+})
 
-    audio.play().catch(() => {
-      // Браузер может заблокировать звук, если пользователь ещё не кликал по странице
-    })
+const soundButtonTitle = computed(() => {
+  if (props.isReorderMode) return 'Сначала сохраните порядок'
 
-    hasPlayedSound.value = true
+  if (!globalSoundEnabled.value) {
+    return soundEnabled.value
+      ? 'Общий звук выключен. Звук этого таймера включён'
+      : 'Общий звук выключен. Звук этого таймера выключен'
   }
+
+  return soundEnabled.value ? 'Выключить звук' : 'Включить звук'
+})
+
+function stopAudio() {
+  audio.pause()
+  audio.currentTime = 0
+}
+
+function playSignalSound() {
+  if (viewStatus.value !== 'signal') return
+  if (!effectiveSoundEnabled.value) return
+  if (hasPlayedSound.value) return
+
+  audio.currentTime = 0
+
+  audio.play().catch(() => {
+    // Браузер может заблокировать звук, если пользователь ещё не кликал по странице
+  })
+
+  hasPlayedSound.value = true
+}
+
+watch(viewStatus, () => {
+  playSignalSound()
+})
+
+watch(effectiveSoundEnabled, (enabled) => {
+  if (!enabled) {
+    stopAudio()
+    return
+  }
+
+  playSignalSound()
 })
 
 const canStop = computed(() => viewStatus.value === 'active')
@@ -103,8 +143,7 @@ function formatTime(sec: number) {
 function completeTimer() {
   if (props.isReorderMode) return
 
-  audio.pause()
-  audio.currentTime = 0
+  stopAudio()
 
   addCompletedTimer(props.timer.id)
 }
@@ -115,8 +154,7 @@ function toggleSound() {
   soundEnabled.value = toggleTimerSound(props.timer.id)
 
   if (!soundEnabled.value) {
-    audio.pause()
-    audio.currentTime = 0
+    stopAudio()
   }
 }
 
@@ -130,8 +168,7 @@ function handleRestart(timeShiftSeconds: number) {
   timersStore.restartTimer(props.timer.id, timeShiftSeconds)
 
   hasPlayedSound.value = false
-  audio.pause()
-  audio.currentTime = 0
+  stopAudio()
 
   showRestartModal.value = false
 }
@@ -141,8 +178,7 @@ function stopTimer() {
 
   timersStore.stopTimer(props.timer.id)
 
-  audio.pause()
-  audio.currentTime = 0
+  stopAudio()
 }
 
 function openEditModal() {
@@ -166,8 +202,7 @@ function openDeleteModal() {
 }
 
 function handleDeleteTimer() {
-  audio.pause()
-  audio.currentTime = 0
+  stopAudio()
 
   timersStore.deleteTimer(props.timer.id)
 
@@ -253,7 +288,7 @@ function handleDeleteTimer() {
 
         <IconButton
           :disabled="isReorderMode"
-          :title="isReorderMode ? 'Сначала сохраните порядок' : soundEnabled ? 'Выключить звук' : 'Включить звук'"
+          :title="soundButtonTitle"
           @click="toggleSound"
         >
           <img

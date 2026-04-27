@@ -35,6 +35,32 @@
     </div>
 
     <div class="toolbar-right">
+      <div class="global-sound" :title="globalSoundButtonTitle">
+        <img
+          class="global-sound-icon"
+          :src="volumeOffIcon"
+          alt="sound off"
+        />
+
+        <button
+          :class="['sound-toggle', { active: globalSoundEnabled }]"
+          type="button"
+          :aria-pressed="globalSoundEnabled"
+          :title="globalSoundButtonTitle"
+          @click="toggleGlobalSound"
+        >
+          <span class="sound-toggle-track">
+            <span class="sound-toggle-thumb" />
+          </span>
+        </button>
+
+        <img
+          class="global-sound-icon"
+          :src="volumeOnIcon"
+          alt="sound on"
+        />
+      </div>
+      
       <button
         class="secondary-btn with-icon"
         type="button"
@@ -71,10 +97,16 @@ import { computed, ref } from 'vue'
 import searchIcon from '../../assets/icons/search.svg'
 import swapIcon from '../../assets/icons/swap.svg'
 import addIcon from '../../assets/icons/add.svg'
+import volumeOnIcon from '../../assets/icons/volume-on.svg'
+import volumeOffIcon from '../../assets/icons/volume-off.svg'
 import AddTimerModal from './AddTimerModal.vue'
 import { useTimersStore } from '../../stores/timers'
 import { usePermissions } from '../../composables/usePermissions'
 import type { TimerFormPayload } from '../../types/timer'
+import {
+  globalSoundEnabled,
+  toggleGlobalSound,
+} from '../../utils/soundSettings'
 
 const props = defineProps<{
   searchQuery: string
@@ -105,6 +137,12 @@ const addButtonTitle = computed(() => {
   if (props.isReorderMode) return 'Сначала сохраните порядок'
 
   return 'Добавить таймер'
+})
+
+const globalSoundButtonTitle = computed(() => {
+  return globalSoundEnabled.value
+    ? 'Выключить звук для всех таймеров'
+    : 'Включить звук для всех таймеров'
 })
 
 function openAddTimerModal() {
@@ -226,6 +264,76 @@ function handleCreateTimer(payload: TimerFormPayload) {
 
 .search input:disabled {
   cursor: not-allowed;
+}
+
+.global-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 42px;
+  color: #6f89ad;
+}
+
+.global-sound-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+}
+
+.sound-toggle-track {
+  position: relative;
+
+  width: 42px;
+  height: 24px;
+
+  border-radius: 999px;
+  background: #d8e1ec;
+
+  transition: background 0.15s ease;
+}
+
+.sound-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+  background: #ffffff;
+
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+
+  transition: transform 0.15s ease;
+}
+
+.sound-toggle.active .sound-toggle-track {
+  background: #6f967f;
+}
+
+.sound-toggle.active .sound-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.sound-toggle:hover .sound-toggle-track {
+  background: #c8d4e0;
+}
+
+.sound-toggle.active:hover .sound-toggle-track {
+  background: #5f8a72;
 }
 
 .secondary-btn,
