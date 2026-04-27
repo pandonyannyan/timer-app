@@ -1,10 +1,10 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')">
+  <div class="overlay" @click.self="close">
     <div class="modal">
       <div class="modal-header">
         <h2>Удалить таймер?</h2>
 
-        <button class="close-btn" type="button" @click="$emit('close')">
+        <button class="close-btn" type="button" @click="close">
           ×
         </button>
       </div>
@@ -15,7 +15,7 @@
       </p>
 
       <div class="actions">
-        <button class="secondary-btn" type="button" @click="$emit('close')">
+        <button class="secondary-btn" type="button" @click="close">
           Отмена
         </button>
 
@@ -28,14 +28,40 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+
 defineProps<{
   timerTitle: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void
   (e: 'confirm'): void
 }>()
+
+function close() {
+  emit('close')
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    close()
+    return
+  }
+
+  if (event.key === 'Enter') {
+    event.preventDefault()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>

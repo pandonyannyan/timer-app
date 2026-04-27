@@ -87,7 +87,7 @@
 
   <AddTimerModal
     v-if="showAddTimerModal"
-    @close="showAddTimerModal = false"
+    @close="closeAddTimerModal"
     @submit="handleCreateTimer"
   />
 </template>
@@ -145,15 +145,27 @@ const globalSoundButtonTitle = computed(() => {
     : 'Включить звук для всех таймеров'
 })
 
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+}
+
 function openAddTimerModal() {
   if (!canCreateTimer.value || props.isReorderMode) return
 
   showAddTimerModal.value = true
+  blurActiveElement()
+}
+
+function closeAddTimerModal() {
+  showAddTimerModal.value = false
+  blurActiveElement()
 }
 
 function handleCreateTimer(payload: TimerFormPayload) {
   timersStore.createTimer(payload)
-  showAddTimerModal.value = false
+  closeAddTimerModal()
 }
 </script>
 

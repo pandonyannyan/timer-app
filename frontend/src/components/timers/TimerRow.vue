@@ -177,6 +177,7 @@ function openRestartModal() {
   if (props.isReorderMode) return
 
   showRestartModal.value = true
+  blurActiveElement()
 }
 
 function handleRestart(timeShiftSeconds: number) {
@@ -199,6 +200,16 @@ function closeRestartModal() {
   blurActiveElement()
 }
 
+function closeEditModal() {
+  showEditModal.value = false
+  blurActiveElement()
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  blurActiveElement()
+}
+
 function stopTimer() {
   if (props.isReorderMode) return
 
@@ -212,12 +223,13 @@ function openEditModal() {
   if (!canEditTimer.value) return
 
   showEditModal.value = true
+  blurActiveElement()
 }
 
 function handleUpdateTimer(payload: TimerFormPayload) {
   timersStore.updateTimer(props.timer.id, payload)
 
-  showEditModal.value = false
+  closeEditModal()
 }
 
 function openDeleteModal() {
@@ -225,6 +237,7 @@ function openDeleteModal() {
   if (!canDeleteTimer.value) return
 
   showDeleteModal.value = true
+  blurActiveElement()
 }
 
 function handleDeleteTimer() {
@@ -232,7 +245,7 @@ function handleDeleteTimer() {
 
   timersStore.deleteTimer(props.timer.id)
 
-  showDeleteModal.value = false
+  closeDeleteModal()
 }
 </script>
 
@@ -353,14 +366,14 @@ function handleDeleteTimer() {
     v-if="showEditModal"
     mode="edit"
     :timer="timer"
-    @close="showEditModal = false"
+    @close="closeEditModal"
     @submit="handleUpdateTimer"
   />
 
   <ConfirmDeleteModal
     v-if="showDeleteModal"
     :timer-title="timer.title"
-    @close="showDeleteModal = false"
+    @close="closeDeleteModal"
     @confirm="handleDeleteTimer"
   />
 </template>

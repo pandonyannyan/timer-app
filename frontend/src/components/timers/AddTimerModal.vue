@@ -1,10 +1,10 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')">
+  <div class="overlay" @click.self="close">
     <div class="modal">
       <div class="modal-header">
         <h2>{{ modalTitle }}</h2>
 
-        <button class="close-btn" type="button" @click="$emit('close')">
+        <button class="close-btn" type="button" @click="close">
           ×
         </button>
       </div>
@@ -97,7 +97,7 @@
         </div>
 
         <div class="actions">
-          <button class="secondary-btn" type="button" @click="$emit('close')">
+          <button class="secondary-btn" type="button" @click="close">
             Отмена
           </button>
 
@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Timer, TimerFormPayload } from '../../types/timer'
 import IconButton from '../ui/IconButton.vue'
 import deleteIcon from '../../assets/icons/delete.svg'
@@ -218,6 +218,24 @@ function removeCurrentImage() {
   shouldRemoveImage.value = true
 }
 
+function close() {
+  emit('close')
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    close()
+    return
+  }
+
+  if (event.key === 'Enter') {
+    if (event.target instanceof HTMLTextAreaElement) return
+
+    event.preventDefault()
+  }
+}
+
 function submit() {
   if (isSubmitDisabled.value) return
 
@@ -229,6 +247,14 @@ function submit() {
     removeImage: shouldRemoveImage.value,
   })
 }
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>
