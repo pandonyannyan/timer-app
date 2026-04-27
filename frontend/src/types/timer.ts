@@ -10,6 +10,7 @@ export interface Timer {
   durationSeconds: number
   timeShiftSeconds: number
   startedAt: string
+  lastRunBy: string
   status: TimerStatus
   soundEnabled: boolean
   sortOrder: number

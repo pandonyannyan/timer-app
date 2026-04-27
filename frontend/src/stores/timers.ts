@@ -7,6 +7,8 @@ import timerImage2 from '../assets/timer-images/img2.jpg'
 import timerImage3 from '../assets/timer-images/img3.jpg'
 import timerImage4 from '../assets/timer-images/img4.gif'
 
+const MOCK_CURRENT_USER_NAME = 'Pupok Pupochkov'
+
 export const useTimersStore = defineStore('timers', {
   state: () => ({
     timers: [
@@ -18,6 +20,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 6000,
         timeShiftSeconds: 200,
         startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+        lastRunBy: MOCK_CURRENT_USER_NAME, 
         status: 'active',
         soundEnabled: true,
         sortOrder: 1,
@@ -32,6 +35,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 10,
         timeShiftSeconds: 0,
         startedAt: new Date().toISOString(),
+        lastRunBy: MOCK_CURRENT_USER_NAME, 
         status: 'active',
         soundEnabled: true,
         sortOrder: 2,
@@ -46,6 +50,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 3600,
         timeShiftSeconds: 0,
         startedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'stopped',
         soundEnabled: false,
         sortOrder: 3,
@@ -60,6 +65,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 10,
         timeShiftSeconds: 0,
         startedAt: new Date(Date.now() - 1000 * 60).toISOString(),
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: false,
         sortOrder: 4,
@@ -74,6 +80,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 60,
         timeShiftSeconds: 0,
         startedAt: new Date().toISOString(),
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'stopped',
         soundEnabled: false,
         sortOrder: 5,
@@ -103,6 +110,7 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: payload.durationMinutes * 60,
         timeShiftSeconds: 0,
         startedAt: now,
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: true,
         sortOrder: minSortOrder - 1,
@@ -157,10 +165,13 @@ export const useTimersStore = defineStore('timers', {
       const timer = this.timers.find(t => t.id === timerId)
       if (!timer) return
 
+      const now = new Date().toISOString()
+
       timer.status = 'active'
-      timer.startedAt = new Date().toISOString()
+      timer.startedAt = now
+      timer.lastRunBy = MOCK_CURRENT_USER_NAME
       timer.timeShiftSeconds = timeShiftSeconds
-      timer.updatedAt = new Date().toISOString()
+      timer.updatedAt = now
 
       removeCompletedTimer(timerId)
     },

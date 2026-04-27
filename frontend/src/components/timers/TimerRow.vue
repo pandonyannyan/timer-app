@@ -107,6 +107,21 @@ const shiftMinutes = computed(() => {
   return Math.round(props.timer.timeShiftSeconds / 60)
 })
 
+const lastRunDate = computed(() => {
+  return new Intl.DateTimeFormat('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(props.timer.startedAt))
+})
+
+const lastRunTime = computed(() => {
+  return new Intl.DateTimeFormat('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(props.timer.startedAt))
+})
+
 const stopButtonTitle = computed(() => {
   if (props.isReorderMode) return 'Сначала сохраните порядок'
   if (!canStop.value) return 'Остановить можно только активный таймер'
@@ -248,13 +263,13 @@ function handleDeleteTimer() {
 
     <div class="last-run">
       <div class="last-run-main">
-        <span>2026-04-25</span>
-        <span>14:30</span>
+        <span>{{ lastRunDate }}</span>
+        <span>{{ lastRunTime }}</span>
         <span v-if="shiftMinutes > 0" class="shift">
           delay {{ shiftMinutes }} мин
         </span>
       </div>
-      <div class="user">Pupok Pupochkov</div>
+      <div class="user">{{ timer.lastRunBy }}</div>
     </div>
 
     <div class="actions">
