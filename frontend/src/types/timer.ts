@@ -22,4 +22,5 @@ export interface TimerFormPayload {
   description: string
   durationMinutes: number
   imageFile: File | null
+  removeImage?: boolean
 }

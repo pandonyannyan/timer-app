@@ -77,6 +77,15 @@
               {{ imageFileName }}
             </span>
 
+            <IconButton
+              v-if="canRemoveCurrentImage"
+              class="remove-image-btn"
+              title="Удалить изображение"
+              @click="removeCurrentImage"
+            >
+              <img :src="deleteIcon" alt="delete" />
+            </IconButton>
+
             <input
               id="timer-image"
               class="file-input"
@@ -109,6 +118,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Timer, TimerFormPayload } from '../../types/timer'
+import IconButton from '../ui/IconButton.vue'
+import deleteIcon from '../../assets/icons/delete.svg'
 
 const props = withDefaults(defineProps<{
   mode?: 'create' | 'edit'
@@ -131,6 +142,7 @@ const durationInput = ref(
     : '5'
 )
 const imageFile = ref<File | null>(null)
+const shouldRemoveImage = ref(false)
 
 const isEditMode = computed(() => {
   return props.mode === 'edit'
@@ -176,15 +188,34 @@ const isSubmitDisabled = computed(() => {
 
 const imageFileName = computed(() => {
   if (imageFile.value) return imageFile.value.name
-  if (props.timer?.imageUrl) return 'Текущее изображение'
+
+  if (props.timer?.imageUrl && !shouldRemoveImage.value) {
+    return 'Текущее изображение'
+  }
 
   return 'Файл не выбран'
+})
+
+const canRemoveCurrentImage = computed(() => {
+  return isEditMode.value &&
+    Boolean(props.timer?.imageUrl) &&
+    !imageFile.value &&
+    !shouldRemoveImage.value
 })
 
 function handleImageChange(event: Event) {
   const input = event.target as HTMLInputElement
 
   imageFile.value = input.files?.[0] ?? null
+
+  if (imageFile.value) {
+    shouldRemoveImage.value = false
+  }
+}
+
+function removeCurrentImage() {
+  imageFile.value = null
+  shouldRemoveImage.value = true
 }
 
 function submit() {
@@ -195,6 +226,7 @@ function submit() {
     description: trimmedDescription.value,
     durationMinutes: durationMinutes.value,
     imageFile: imageFile.value,
+    removeImage: shouldRemoveImage.value,
   })
 }
 </script>
@@ -440,6 +472,11 @@ function submit() {
   background: #6f89ad;
 }
 
+.remove-image-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 @media (max-width: 560px) {
   .modal {
     max-width: 100%;
@@ -463,5 +500,10 @@ function submit() {
   .primary-btn {
     flex: 1;
   }
+
+  .remove-image-btn {
+  margin-left: 0;
+  align-self: flex-end;
+}
 }
 </style>

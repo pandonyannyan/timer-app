@@ -122,7 +122,9 @@ export const useTimersStore = defineStore('timers', {
       timer.durationSeconds = payload.durationMinutes * 60
       timer.updatedAt = new Date().toISOString()
 
-      if (payload.imageFile) {
+      if (payload.removeImage) {
+        timer.imageUrl = undefined
+      } else if (payload.imageFile) {
         timer.imageUrl = URL.createObjectURL(payload.imageFile)
       }
     },
