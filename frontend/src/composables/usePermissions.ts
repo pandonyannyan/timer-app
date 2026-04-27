@@ -28,11 +28,6 @@ export function usePermissions() {
     canEditTimer: canManageTimers,
     canDeleteTimer: canManageTimers,
 
-    // только admin
-    canReorderTimers: computed(() => {
-      return currentRole.value === 'admin'
-    }),
-
     // на будущее, для раздела пользователей
     canManageUsers: computed(() => {
       return currentRole.value === 'admin'

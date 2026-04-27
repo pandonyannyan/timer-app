@@ -13,7 +13,6 @@ export interface Timer {
   lastRunBy: string
   status: TimerStatus
   soundEnabled: boolean
-  sortOrder: number
   createdAt: string
   updatedAt: string
 }

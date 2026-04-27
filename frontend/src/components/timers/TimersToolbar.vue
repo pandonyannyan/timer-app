@@ -22,7 +22,7 @@
       </div>
 
       <div :class="['search', { disabled: isReorderMode }]">
-        <img class="search-icon" :src="searchIcon" alt="search" />
+        <img class="search-icon" :src="searchIcon" alt="search">
 
         <input
           :value="searchQuery"
@@ -30,7 +30,7 @@
           placeholder="Поиск"
           :disabled="isReorderMode"
           @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
-        />
+        >
       </div>
     </div>
 
@@ -40,7 +40,7 @@
           class="global-sound-icon"
           :src="volumeOffIcon"
           alt="sound off"
-        />
+        >
 
         <button
           :class="['sound-toggle', { active: globalSoundEnabled }]"
@@ -58,18 +58,18 @@
           class="global-sound-icon"
           :src="volumeOnIcon"
           alt="sound on"
-        />
+        >
       </div>
-      
+
       <button
         class="secondary-btn with-icon"
         type="button"
-        :disabled="!canReorderTimers"
-        :title="canReorderTimers ? reorderButtonTitle : 'Недостаточно прав'"
+        :disabled="!canReorderPinnedTimers"
+        :title="reorderButtonTitle"
         @click="$emit('toggleReorder')"
       >
-        <img :src="swapIcon" alt="swap" />
-        <span>{{ isReorderMode ? 'Сохранить порядок' : 'Поменять местами' }}</span>
+        <img :src="swapIcon" alt="swap">
+        <span>{{ isReorderMode ? 'Сохранить порядок' : 'Изменить порядок' }}</span>
       </button>
 
       <button
@@ -79,7 +79,7 @@
         :title="addButtonTitle"
         @click="openAddTimerModal"
       >
-        <img :src="addIcon" alt="add" />
+        <img :src="addIcon" alt="add">
         <span>Добавить таймер</span>
       </button>
     </div>
@@ -112,6 +112,7 @@ const props = defineProps<{
   searchQuery: string
   statusFilter: 'all' | 'active'
   isReorderMode: boolean
+  canReorderPinnedTimers: boolean
 }>()
 
 defineEmits<{
@@ -125,11 +126,18 @@ const showAddTimerModal = ref(false)
 
 const {
   canCreateTimer,
-  canReorderTimers,
 } = usePermissions()
 
 const reorderButtonTitle = computed(() => {
-  return props.isReorderMode ? 'Сохранить порядок таймеров' : 'Поменять таймеры местами'
+  if (props.isReorderMode) {
+    return 'Сохранить порядок закреплённых таймеров'
+  }
+
+  if (!props.canReorderPinnedTimers) {
+    return 'Закрепите минимум два таймера, чтобы изменить их порядок'
+  }
+
+  return 'Изменить порядок закреплённых таймеров'
 })
 
 const addButtonTitle = computed(() => {

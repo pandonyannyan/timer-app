@@ -6,15 +6,15 @@
       v-model:search-query="searchQuery"
       v-model:status-filter="statusFilter"
       :is-reorder-mode="isReorderMode"
+      :can-reorder-pinned-timers="canReorderPinnedTimers"
       @toggle-reorder="toggleReorderMode"
     />
 
     <TimersTable
       :timers="visibleTimers"
-      :sort-by="sortBy"
-      :sort-direction="sortDirection"
       :is-reorder-mode="isReorderMode"
-      @change-sort="changeSort"
+      :pinned-timer-ids="currentPinnedTimerIds"
+      @toggle-pin="togglePinnedTimer"
       @reorder="handleReorder"
     />
   </div>
@@ -25,26 +25,46 @@ import { computed, ref } from 'vue'
 import TimersToolbar from '../components/timers/TimersToolbar.vue'
 import TimersTable from '../components/timers/TimersTable.vue'
 import { useTimersStore } from '../stores/timers'
+import { usePinnedTimers } from '../composables/usePinnedTimers'
 import { useNow } from '../utils/useNow'
 import { isTimerCompleted } from '../utils/completedTimers'
 import type { Timer, TimerViewStatus } from '../types/timer'
 
 type StatusFilter = 'all' | 'active'
-type SortBy = 'title' | 'remaining'
-type SortDirection = 'asc' | 'desc'
 
 const timersStore = useTimersStore()
 const { now } = useNow()
+
+const {
+  pinnedTimerIds,
+  pinnedCount,
+  isTimerPinned,
+  togglePinnedTimer,
+  reorderPinnedTimers,
+} = usePinnedTimers()
 
 const pageOpenedAt = Date.now()
 
 const searchQuery = ref('')
 const statusFilter = ref<StatusFilter>('all')
-const sortBy = ref<SortBy | null>(null)
-const sortDirection = ref<SortDirection>('asc')
 
 const isReorderMode = ref(false)
-const reorderDraftTimers = ref<Timer[]>([])
+const reorderDraftPinnedTimerIds = ref<string[]>([])
+
+const canReorderPinnedTimers = computed(() => pinnedCount.value > 1)
+
+const currentPinnedTimerIds = computed(() => {
+  return isReorderMode.value
+    ? reorderDraftPinnedTimerIds.value
+    : pinnedTimerIds.value
+})
+
+const viewStatusPriority: Record<TimerViewStatus, number> = {
+  signal: 0,
+  active: 1,
+  stopped: 2,
+  completed: 3,
+}
 
 function getRemaining(timer: Timer) {
   if (timer.status === 'stopped') return 0
@@ -79,18 +99,40 @@ function getViewStatus(timer: Timer): TimerViewStatus {
   return 'active'
 }
 
-function sortTimersByOrder(timers: Timer[]) {
-  return [...timers].sort((a, b) => a.sortOrder - b.sortOrder)
+function sortPinnedTimers(timers: Timer[], pinnedIds: string[]) {
+  const timerMap = new Map(timers.map(timer => [timer.id, timer]))
+
+  return pinnedIds
+    .map(timerId => timerMap.get(timerId))
+    .filter((timer): timer is Timer => Boolean(timer))
 }
 
-const visibleTimers = computed(() => {
-  if (isReorderMode.value) {
-    return reorderDraftTimers.value
-  }
+function sortUnpinnedTimers(timers: Timer[]) {
+  return [...timers].sort((a, b) => {
+    const aViewStatus = getViewStatus(a)
+    const bViewStatus = getViewStatus(b)
 
+    const statusDifference =
+      viewStatusPriority[aViewStatus] - viewStatusPriority[bViewStatus]
+
+    if (statusDifference !== 0) {
+      return statusDifference
+    }
+
+    const remainingDifference = getRemaining(a) - getRemaining(b)
+
+    if (remainingDifference !== 0) {
+      return remainingDifference
+    }
+
+    return a.title.localeCompare(b.title, 'ru')
+  })
+}
+
+const filteredTimers = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
 
-  let result = timersStore.timers.filter(timer => {
+  return timersStore.timers.filter(timer => {
     const viewStatus = getViewStatus(timer)
 
     if (statusFilter.value === 'active') {
@@ -106,59 +148,40 @@ const visibleTimers = computed(() => {
       timer.description.toLowerCase().includes(query)
     )
   })
-
-  if (sortBy.value) {
-    result = [...result].sort((a, b) => {
-      let compare = 0
-
-      if (sortBy.value === 'title') {
-        compare = a.title.localeCompare(b.title, 'ru')
-      }
-
-      if (sortBy.value === 'remaining') {
-        compare = getRemaining(a) - getRemaining(b)
-      }
-
-      return sortDirection.value === 'asc' ? compare : -compare
-    })
-
-    return result
-  }
-
-  return sortTimersByOrder(result)
 })
 
-function changeSort(nextSortBy: SortBy) {
-  if (isReorderMode.value) return
-
-  if (sortBy.value === nextSortBy) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-    return
+const visibleTimers = computed(() => {
+  if (isReorderMode.value) {
+    return sortPinnedTimers(timersStore.timers, reorderDraftPinnedTimerIds.value)
   }
 
-  sortBy.value = nextSortBy
-  sortDirection.value = 'asc'
-}
+  const pinnedTimers = sortPinnedTimers(filteredTimers.value, pinnedTimerIds.value)
+  const unpinnedTimers = sortUnpinnedTimers(
+    filteredTimers.value.filter(timer => !isTimerPinned(timer.id)),
+  )
+
+  return [...pinnedTimers, ...unpinnedTimers]
+})
 
 function toggleReorderMode() {
+  if (!canReorderPinnedTimers.value) return
+
   if (isReorderMode.value) {
-    timersStore.reorderTimers(reorderDraftTimers.value.map(timer => timer.id))
-    reorderDraftTimers.value = []
+    reorderPinnedTimers(reorderDraftPinnedTimerIds.value)
+    reorderDraftPinnedTimerIds.value = []
     isReorderMode.value = false
     return
   }
 
   searchQuery.value = ''
   statusFilter.value = 'all'
-  sortBy.value = null
-  sortDirection.value = 'asc'
 
-  reorderDraftTimers.value = sortTimersByOrder(timersStore.timers)
+  reorderDraftPinnedTimerIds.value = [...pinnedTimerIds.value]
   isReorderMode.value = true
 }
 
 function handleReorder(nextTimers: Timer[]) {
-  reorderDraftTimers.value = nextTimers
+  reorderDraftPinnedTimerIds.value = nextTimers.map(timer => timer.id)
 }
 </script>
 

@@ -1,52 +1,15 @@
 <template>
   <div :class="['table', { 'table--reorder': isReorderMode }]">
     <div class="header">
-      <div class="header-cell header-cell--sortable">
-        <span>Название</span>
-
-        <button
-          class="sort-button"
-          :class="{ 'sort-button--active': sortBy === 'title' }"
-          type="button"
-          title="Сортировать по названию"
-          aria-label="Сортировать по названию"
-          :disabled="isReorderMode"
-          @click="$emit('changeSort', 'title')"
-        >
-          <img
-            class="sort-icon"
-            :class="{ 'sort-icon--desc': sortBy === 'title' && sortDirection === 'desc' }"
-            :src="sortIcon"
-            alt=""
-          >
-        </button>
+      <div class="header-cell header-cell--pin">
+        <span v-if="isReorderMode">Порядок</span>
       </div>
 
+      <div class="header-cell">Название</div>
       <div class="header-cell">Статус</div>
       <div class="header-cell">Описание</div>
       <div class="header-cell">Длительность</div>
-
-      <div class="header-cell header-cell--sortable">
-        <span>Осталось</span>
-
-        <button
-          class="sort-button"
-          :class="{ 'sort-button--active': sortBy === 'remaining' }"
-          type="button"
-          title="Сортировать по оставшемуся времени"
-          aria-label="Сортировать по оставшемуся времени"
-          :disabled="isReorderMode"
-          @click="$emit('changeSort', 'remaining')"
-        >
-          <img
-            class="sort-icon"
-            :class="{ 'sort-icon--desc': sortBy === 'remaining' && sortDirection === 'desc' }"
-            :src="sortIcon"
-            alt=""
-          >
-        </button>
-      </div>
-
+      <div class="header-cell">Осталось</div>
       <div class="header-cell">Последний запуск</div>
       <div class="header-cell header-cell--actions">Действия</div>
     </div>
@@ -71,11 +34,13 @@
       <TimerRow
         :timer="timer"
         :is-reorder-mode="isReorderMode"
+        :is-pinned="pinnedTimerIds.includes(timer.id)"
+        @toggle-pin="$emit('togglePin', timer.id)"
       />
     </div>
 
     <div v-if="timers.length === 0" class="empty">
-      Таймеры не найдены
+      {{ isReorderMode ? 'Закреплённые таймеры не найдены' : 'Таймеры не найдены' }}
     </div>
   </div>
 </template>
@@ -83,19 +48,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import TimerRow from './TimerRow.vue'
-import sortIcon from '../../assets/icons/sort.svg'
 import type { Timer } from '../../types/timer'
 
 const props = defineProps<{
   timers: Timer[]
-  sortBy: 'title' | 'remaining' | null
-  sortDirection: 'asc' | 'desc'
   isReorderMode: boolean
+  pinnedTimerIds: string[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'changeSort', value: 'title' | 'remaining'): void
   (e: 'reorder', value: Timer[]): void
+  (e: 'togglePin', timerId: string): void
 }>()
 
 const draggedIndex = ref<number | null>(null)
@@ -128,7 +91,7 @@ function handleDragEnd() {
 
 <style scoped>
 .table {
-  --timers-grid-columns: 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
+  --timers-grid-columns: 44px 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
   --timers-grid-gap: 18px;
 
   background: #eef3f7;
@@ -160,8 +123,9 @@ function handleDragEnd() {
   line-height: 1;
 }
 
-.header-cell--sortable {
-  gap: 6px;
+.header-cell--pin {
+  justify-content: center;
+  font-size: 12px;
 }
 
 .header-cell--actions {
@@ -186,77 +150,6 @@ function handleDragEnd() {
 
 .row-wrapper--dragging {
   opacity: 0.45;
-}
-
-.sort-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-
-  width: 24px;
-  height: 24px;
-  padding: 0;
-
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  color: #4b5563;
-  cursor: pointer;
-
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.1s ease;
-}
-
-.sort-button:hover {
-  background: #eef3f7;
-  border-color: #d5dde8;
-}
-
-.sort-button:active {
-  transform: scale(0.96);
-}
-
-.sort-button:focus-visible {
-  outline: 2px solid #6f89ad;
-  outline-offset: 2px;
-}
-
-.sort-button--active {
-  background: #eef3f7;
-  border-color: #d5dde8;
-}
-
-.sort-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.sort-button:disabled:hover {
-  background: transparent;
-  border-color: transparent;
-}
-
-.sort-icon {
-  width: 14px;
-  height: 14px;
-  display: block;
-  opacity: 0.65;
-
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-
-.sort-button:hover .sort-icon,
-.sort-button--active .sort-icon {
-  opacity: 1;
-}
-
-.sort-icon--desc {
-  transform: rotate(180deg);
 }
 
 .empty {

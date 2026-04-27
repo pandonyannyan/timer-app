@@ -20,10 +20,9 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 6000,
         timeShiftSeconds: 200,
         startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-        lastRunBy: MOCK_CURRENT_USER_NAME, 
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: true,
-        sortOrder: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -35,10 +34,9 @@ export const useTimersStore = defineStore('timers', {
         durationSeconds: 10,
         timeShiftSeconds: 0,
         startedAt: new Date().toISOString(),
-        lastRunBy: MOCK_CURRENT_USER_NAME, 
+        lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: true,
-        sortOrder: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -53,7 +51,6 @@ export const useTimersStore = defineStore('timers', {
         lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'stopped',
         soundEnabled: false,
-        sortOrder: 3,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -68,7 +65,6 @@ export const useTimersStore = defineStore('timers', {
         lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: false,
-        sortOrder: 4,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -83,7 +79,6 @@ export const useTimersStore = defineStore('timers', {
         lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'stopped',
         soundEnabled: false,
-        sortOrder: 5,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -98,10 +93,6 @@ export const useTimersStore = defineStore('timers', {
         ? URL.createObjectURL(payload.imageFile)
         : undefined
 
-      const minSortOrder = this.timers.length
-        ? Math.min(...this.timers.map(timer => timer.sortOrder))
-        : 1
-
       const timer: Timer = {
         id: crypto.randomUUID(),
         title: payload.title,
@@ -113,7 +104,6 @@ export const useTimersStore = defineStore('timers', {
         lastRunBy: MOCK_CURRENT_USER_NAME,
         status: 'active',
         soundEnabled: true,
-        sortOrder: minSortOrder - 1,
         createdAt: now,
         updatedAt: now,
       }
@@ -141,24 +131,6 @@ export const useTimersStore = defineStore('timers', {
       this.timers = this.timers.filter(t => t.id !== timerId)
 
       removeCompletedTimer(timerId)
-    },
-
-    reorderTimers(timerIds: string[]) {
-      const now = new Date().toISOString()
-      const orderMap = new Map(
-        timerIds.map((timerId, index) => [timerId, index + 1])
-      )
-
-      this.timers.forEach(timer => {
-        const nextSortOrder = orderMap.get(timer.id)
-
-        if (!nextSortOrder) return
-
-        timer.sortOrder = nextSortOrder
-        timer.updatedAt = now
-      })
-
-      this.timers.sort((a, b) => a.sortOrder - b.sortOrder)
     },
 
     restartTimer(timerId: string, timeShiftSeconds = 0) {

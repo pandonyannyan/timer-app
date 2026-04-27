@@ -8,6 +8,7 @@ import {
   toggleTimerSound,
 } from '../../utils/soundSettings'
 import { useTimerView } from '../../composables/useTimerView'
+import { usePinnedTimers } from '../../composables/usePinnedTimers'
 import { usePermissions } from '../../composables/usePermissions'
 import beepSound from '../../assets/sounds/beep.mp3'
 import { useTimersStore } from '../../stores/timers'
@@ -21,15 +22,25 @@ import volumeOnIcon from '../../assets/icons/volume-on.svg'
 import volumeOffIcon from '../../assets/icons/volume-off.svg'
 import editIcon from '../../assets/icons/edit.svg'
 import deleteIcon from '../../assets/icons/delete.svg'
+import pinIcon from '../../assets/icons/pin.svg'
+import pinFilledIcon from '../../assets/icons/pin-filled.svg'
 
 const props = withDefaults(defineProps<{
   timer: Timer
   isReorderMode?: boolean
+  isPinned?: boolean
 }>(), {
   isReorderMode: false,
+  isPinned: false,
 })
 
+const emit = defineEmits<{
+  (e: 'togglePin'): void
+}>()
+
 const timersStore = useTimersStore()
+const { removePinnedTimer } = usePinnedTimers()
+
 const showRestartModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
@@ -63,6 +74,10 @@ const soundButtonTitle = computed(() => {
   }
 
   return soundEnabled.value ? 'Выключить звук' : 'Включить звук'
+})
+
+const pinButtonTitle = computed(() => {
+  return props.isPinned ? 'Открепить таймер' : 'Закрепить таймер'
 })
 
 function stopAudio() {
@@ -163,6 +178,12 @@ function completeTimer() {
   addCompletedTimer(props.timer.id)
 }
 
+function togglePin() {
+  if (props.isReorderMode) return
+
+  emit('togglePin')
+}
+
 function toggleSound() {
   if (props.isReorderMode) return
 
@@ -243,6 +264,7 @@ function openDeleteModal() {
 function handleDeleteTimer() {
   stopAudio()
 
+  removePinnedTimer(props.timer.id)
   timersStore.deleteTimer(props.timer.id)
 
   closeDeleteModal()
@@ -251,6 +273,33 @@ function handleDeleteTimer() {
 
 <template>
   <div :class="['row', { highlighted: viewStatus === 'signal' }]">
+    <div class="pin-cell">
+      <span
+        v-if="isReorderMode"
+        class="drag-handle"
+        title="Перетащите, чтобы изменить порядок"
+        aria-hidden="true"
+      >
+        ⋮⋮
+      </span>
+
+      <button
+        v-else
+        class="pin-button"
+        :class="{ 'pin-button--active': isPinned }"
+        type="button"
+        :title="pinButtonTitle"
+        :aria-label="pinButtonTitle"
+        @click="togglePin"
+      >
+        <img
+          class="pin-icon"
+          :src="isPinned ? pinFilledIcon : pinIcon"
+          alt=""
+        >
+      </button>
+    </div>
+
     <div class="name">
       <div class="timer-image">
         <img
@@ -313,7 +362,7 @@ function handleDeleteTimer() {
           :disabled="isReorderMode"
           @click="openRestartModal"
         >
-          <img :src="restartIcon" alt="restart" />
+          <img :src="restartIcon" alt="restart">
         </IconButton>
 
         <IconButton
@@ -322,7 +371,7 @@ function handleDeleteTimer() {
           :title="stopButtonTitle"
           @click="stopTimer"
         >
-          <img :src="stopIcon" alt="stop" />
+          <img :src="stopIcon" alt="stop">
         </IconButton>
 
         <IconButton
@@ -333,7 +382,7 @@ function handleDeleteTimer() {
           <img
             :src="soundEnabled ? volumeOnIcon : volumeOffIcon"
             alt="sound"
-          />
+          >
         </IconButton>
 
         <IconButton
@@ -341,7 +390,7 @@ function handleDeleteTimer() {
           :title="editButtonTitle"
           @click="openEditModal"
         >
-          <img :src="editIcon" alt="edit" />
+          <img :src="editIcon" alt="edit">
         </IconButton>
 
         <IconButton
@@ -349,7 +398,7 @@ function handleDeleteTimer() {
           :title="deleteButtonTitle"
           @click="openDeleteModal"
         >
-          <img :src="deleteIcon" alt="delete" />
+          <img :src="deleteIcon" alt="delete">
         </IconButton>
       </template>
     </div>
@@ -411,6 +460,83 @@ function handleDeleteTimer() {
   border-color: #6f89ad;
   background: #f9fbff;
   box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.pin-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.pin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.pin-button:hover {
+  background: #eef3f7;
+  border-color: #d5dde8;
+  color: #6f89ad;
+}
+
+.pin-button:active {
+  transform: scale(0.96);
+}
+
+.pin-button:focus-visible {
+  outline: 2px solid #6f89ad;
+  outline-offset: 2px;
+}
+
+.pin-button--active {
+  color: #6f89ad;
+  background: #eef3f7;
+  border-color: #d5dde8;
+}
+
+.pin-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  color: #9ca3af;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -5px;
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .name {
