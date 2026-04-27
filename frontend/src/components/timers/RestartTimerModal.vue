@@ -36,6 +36,10 @@
           Введите целое количество минут: 1, 5, 10, 60...
         </p>
 
+        <p v-else-if="isShiftTooSmall" class="error">
+          Смещение должно быть не меньше 1 минуты
+        </p>
+
         <p v-else-if="isShiftTooLarge" class="error">
           Смещение не может быть больше длительности таймера ({{ maxShiftMinutes }} мин)
         </p>
@@ -93,6 +97,10 @@ const shiftMinutes = computed(() => {
   return Number(minutesInput.value)
 })
 
+const isShiftTooSmall = computed(() => {
+  return isValidMinutesFormat.value && shiftMinutes.value < 1
+})
+
 const isShiftTooLarge = computed(() => {
   return isValidMinutesFormat.value && shiftMinutes.value > maxShiftMinutes.value
 })
@@ -100,6 +108,7 @@ const isShiftTooLarge = computed(() => {
 const isShiftInvalid = computed(() => {
   return mode.value === 'shift' && (
     !isValidMinutesFormat.value ||
+    isShiftTooSmall.value ||
     isShiftTooLarge.value
   )
 })
