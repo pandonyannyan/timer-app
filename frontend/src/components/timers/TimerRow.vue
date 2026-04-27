@@ -185,7 +185,18 @@ function handleRestart(timeShiftSeconds: number) {
   hasPlayedSound.value = false
   stopAudio()
 
+  closeRestartModal()
+}
+
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+}
+
+function closeRestartModal() {
   showRestartModal.value = false
+  blurActiveElement()
 }
 
 function stopTimer() {
@@ -334,7 +345,7 @@ function handleDeleteTimer() {
   <RestartTimerModal
     v-if="showRestartModal"
     :duration-seconds="timer.durationSeconds"
-    @close="showRestartModal = false"
+    @close="closeRestartModal"
     @submit="handleRestart"
   />
 

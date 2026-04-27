@@ -1,75 +1,77 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')">
+  <div class="overlay" @click.self="close">
     <div class="modal">
       <div class="modal-header">
         <h2>Повторный запуск</h2>
-        <button class="close-btn" type="button" @click="$emit('close')">×</button>
+        <button class="close-btn" type="button" @click="close">×</button>
       </div>
+      
+      <form class="restart-form">
+        <div class="options">
+          <label :class="['option', { active: mode === 'now' }]">
+            <input type="radio" value="now" v-model="mode" />
+            <span>Запустить от текущего времени</span>
+          </label>
 
-      <div class="options">
-        <label :class="['option', { active: mode === 'now' }]">
-          <input type="radio" value="now" v-model="mode" />
-          <span>Запустить от текущего времени</span>
-        </label>
+          <label :class="['option', { active: mode === 'shift' }]">
+            <input type="radio" value="shift" v-model="mode" />
+            <span>Запустить со сдвигом</span>
+          </label>
+        </div>
 
-        <label :class="['option', { active: mode === 'shift' }]">
-          <input type="radio" value="shift" v-model="mode" />
-          <span>Запустить со сдвигом</span>
-        </label>
-      </div>
+        <div v-if="mode === 'shift'" class="shift-block">
+          <label class="field-label" for="shift-minutes">
+            Смещение (минут)
+          </label>
 
-      <div v-if="mode === 'shift'" class="shift-block">
-        <label class="field-label" for="shift-minutes">
-          Смещение (минут)
-        </label>
+          <input
+            id="shift-minutes"
+            class="shift-input"
+            type="text"
+            inputmode="numeric"
+            v-model="minutesInput"
+            :class="{ invalid: isShiftInvalid }"
+          />
 
-        <input
-          id="shift-minutes"
-          class="shift-input"
-          type="text"
-          inputmode="numeric"
-          v-model="minutesInput"
-          :class="{ invalid: isShiftInvalid }"
-        />
+          <p v-if="!isValidMinutesFormat" class="error">
+            Введите целое количество минут: 1, 5, 10, 60...
+          </p>
 
-        <p v-if="!isValidMinutesFormat" class="error">
-          Введите целое количество минут: 1, 5, 10, 60...
-        </p>
+          <p v-else-if="isShiftTooSmall" class="error">
+            Смещение должно быть не меньше 1 минуты
+          </p>
 
-        <p v-else-if="isShiftTooSmall" class="error">
-          Смещение должно быть не меньше 1 минуты
-        </p>
+          <p v-else-if="isShiftTooLarge" class="error">
+            Смещение не может быть больше длительности таймера ({{ maxShiftMinutes }} мин)
+          </p>
 
-        <p v-else-if="isShiftTooLarge" class="error">
-          Смещение не может быть больше длительности таймера ({{ maxShiftMinutes }} мин)
-        </p>
+          <p class="hint">
+            Базовая длительность таймера будет уменьшена на указанное значение
+          </p>
+        </div>
 
-        <p class="hint">
-          Базовая длительность таймера будет уменьшена на указанное значение
-        </p>
-      </div>
+        <div class="actions">
+          <button class="secondary-btn" type="button" @click="close">
+            Отмена
+          </button>
 
-      <div class="actions">
-        <button class="secondary-btn" type="button" @click="$emit('close')">
-          Отмена
-        </button>
-
-        <button
-          class="primary-btn"
-          type="button"
-          :disabled="isSubmitDisabled"
-          :title="isSubmitDisabled ? 'Введите корректное смещение' : 'Запустить таймер'"
-          @click="submit"
-        >
-          Запустить
-        </button>
-      </div>
+          <button
+            class="primary-btn"
+            type="button"
+            :disabled="isSubmitDisabled"
+            :title="isSubmitDisabled ? 'Введите корректное смещение' : 'Запустить таймер'"
+            @click="submit"
+          >
+            Запустить
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const props = defineProps<{
   durationSeconds: number
@@ -127,6 +129,31 @@ function submit() {
 
   emit('submit', shift)
 }
+
+function close() {
+  emit('close')
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    close()
+    return
+  }
+
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    submit()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>
@@ -339,5 +366,9 @@ function submit() {
 
 .primary-btn:disabled:hover {
   background: #6f89ad;
+}
+
+.restart-form {
+  margin: 0;
 }
 </style>
