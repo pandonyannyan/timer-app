@@ -23,8 +23,8 @@
             placeholder="Например: Новый таймер"
           />
 
-          <p v-if="isTitleInvalid" class="error">
-            Введите название таймера
+          <p class="error error-slot">
+            {{ titleErrorMessage || '\u00A0' }}
           </p>
         </div>
 
@@ -54,16 +54,8 @@
             inputmode="numeric"
           />
 
-          <p v-if="!isValidDurationFormat" class="error">
-            Введите целое количество минут
-          </p>
-
-          <p v-else-if="isDurationTooSmall" class="error">
-            Минимальная длительность — 1 минута
-          </p>
-
-          <p v-else-if="isDurationTooLarge" class="error">
-            Максимальная длительность — 24 часа (1440 минут)
+          <p class="error error-slot">
+            {{ durationErrorMessage || '\u00A0' }}
           </p>
         </div>
 
@@ -171,6 +163,14 @@ const isTitleInvalid = computed(() => {
   return trimmedTitle.value.length === 0
 })
 
+const titleErrorMessage = computed(() => {
+  if (isTitleInvalid.value) {
+    return 'Введите название таймера'
+  }
+
+  return ''
+})
+
 const isValidDurationFormat = computed(() => {
   return /^\d+$/.test(durationInput.value)
 })
@@ -193,6 +193,22 @@ const isDurationInvalid = computed(() => {
   return !isValidDurationFormat.value ||
     isDurationTooSmall.value ||
     isDurationTooLarge.value
+})
+
+const durationErrorMessage = computed(() => {
+  if (!isValidDurationFormat.value) {
+    return 'Введите целое количество минут'
+  }
+
+  if (isDurationTooSmall.value) {
+    return 'Минимальная длительность — 1 минута'
+  }
+
+  if (isDurationTooLarge.value) {
+    return 'Максимальная длительность — 24 часа (1440 минут)'
+  }
+
+  return ''
 })
 
 const isSubmitDisabled = computed(() => {
@@ -410,6 +426,10 @@ onBeforeUnmount(() => {
   color: #b15b5b;
   font-size: 13px;
   line-height: 1.35;
+}
+
+.error-slot {
+  min-height: 20px;
 }
 
 .file-row {

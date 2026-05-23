@@ -33,16 +33,8 @@
             :class="{ invalid: isShiftInvalid }"
           />
 
-          <p v-if="!isValidMinutesFormat" class="error">
-            Введите целое количество минут: 1, 5, 10, 60...
-          </p>
-
-          <p v-else-if="isShiftTooSmall" class="error">
-            Смещение должно быть не меньше 1 минуты
-          </p>
-
-          <p v-else-if="isShiftTooLarge" class="error">
-            Смещение не может быть больше длительности таймера ({{ maxShiftMinutes }} мин)
+          <p class="error error-slot">
+            {{ shiftErrorMessage || '\u00A0' }}
           </p>
 
           <p class="hint">
@@ -113,6 +105,22 @@ const isShiftInvalid = computed(() => {
     isShiftTooSmall.value ||
     isShiftTooLarge.value
   )
+})
+
+const shiftErrorMessage = computed(() => {
+  if (!isValidMinutesFormat.value) {
+    return 'Введите целое количество минут: 1, 5, 10, 60...'
+  }
+
+  if (isShiftTooSmall.value) {
+    return 'Смещение должно быть не меньше 1 минуты'
+  }
+
+  if (isShiftTooLarge.value) {
+    return `Смещение не может быть больше длительности таймера (${maxShiftMinutes.value} мин)`
+  }
+
+  return ''
 })
 
 const isSubmitDisabled = computed(() => {
@@ -309,6 +317,10 @@ onBeforeUnmount(() => {
   color: #b15b5b;
   font-size: 13px;
   line-height: 1.35;
+}
+
+.error-slot {
+  min-height: 20px;
 }
 
 .hint {
