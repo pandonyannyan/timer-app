@@ -341,7 +341,7 @@ function handleCreateTimer(payload: TimerFormPayload) {
 }
 
 .sound-toggle.active .sound-toggle-track {
-  background: #6f967f;
+  background: #6f89ad;
 }
 
 .sound-toggle.active .sound-toggle-thumb {
@@ -353,7 +353,7 @@ function handleCreateTimer(payload: TimerFormPayload) {
 }
 
 .sound-toggle.active:hover .sound-toggle-track {
-  background: #5f8a72;
+  background: #5f7a9f;
 }
 
 .secondary-btn,
