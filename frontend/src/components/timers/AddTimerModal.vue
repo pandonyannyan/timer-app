@@ -59,7 +59,11 @@
           </p>
 
           <p v-else-if="isDurationTooSmall" class="error">
-            Длительность должна быть больше 0 минут
+            Минимальная длительность — 1 минута
+          </p>
+
+          <p v-else-if="isDurationTooLarge" class="error">
+            Максимальная длительность — 24 часа (1440 минут)
           </p>
         </div>
 
@@ -144,6 +148,9 @@ const durationInput = ref(
 const imageFile = ref<File | null>(null)
 const shouldRemoveImage = ref(false)
 
+const MIN_DURATION_MINUTES = 1
+const MAX_DURATION_MINUTES = 24 * 60
+
 const isEditMode = computed(() => {
   return props.mode === 'edit'
 })
@@ -175,11 +182,17 @@ const durationMinutes = computed(() => {
 })
 
 const isDurationTooSmall = computed(() => {
-  return isValidDurationFormat.value && durationMinutes.value <= 0
+  return isValidDurationFormat.value && durationMinutes.value < MIN_DURATION_MINUTES
+})
+
+const isDurationTooLarge = computed(() => {
+  return isValidDurationFormat.value && durationMinutes.value > MAX_DURATION_MINUTES
 })
 
 const isDurationInvalid = computed(() => {
-  return !isValidDurationFormat.value || isDurationTooSmall.value
+  return !isValidDurationFormat.value ||
+    isDurationTooSmall.value ||
+    isDurationTooLarge.value
 })
 
 const isSubmitDisabled = computed(() => {
