@@ -272,6 +272,7 @@ function submit() {
     title: trimmedTitle.value,
     description: trimmedDescription.value,
     durationMinutes: durationMinutes.value,
+    minDurationMinutes: null,
     imageFile: imageFile.value,
     removeImage: shouldRemoveImage.value,
   })

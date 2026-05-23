@@ -8,6 +8,7 @@ export interface Timer {
   description: string
   imageUrl?: string
   durationSeconds: number
+  minDurationSeconds: number | null
   timeShiftSeconds: number
   startedAt: string
   lastRunBy: string
@@ -21,6 +22,7 @@ export interface TimerFormPayload {
   title: string
   description: string
   durationMinutes: number
+  minDurationMinutes: number | null
   imageFile: File | null
   removeImage?: boolean
 }

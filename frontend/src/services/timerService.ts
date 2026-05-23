@@ -7,6 +7,10 @@ import timerImage4 from '../assets/timer-images/img4.gif'
 
 const MOCK_CURRENT_USER_NAME = 'Pupok Pupochkov'
 
+const toSecondsOrNull = (minutes: number | null): number | null => {
+  return minutes === null ? null : minutes * 60
+}
+
 const mockTimers: Timer[] = [
   {
     id: '1',
@@ -14,6 +18,7 @@ const mockTimers: Timer[] = [
     description: 'Почесать пупок пупочку. Не просто почесать, а так почесать, чтоб всем стало хорошо. И пупочку, и жопучке, и соседским пёськам, и афганским дроздам. Кстати, раз это очень длинное описание - сюда можно написать всякую ерунду. Например разберёмся, почему котлеты вкусные. Они вкусные благодаря сочетанию сочного мясного фарша (часто свино-говяжьего), обжариванию до хрустящей корочки и добавлению компонентов, удерживающих влагу (хлеб, лук, ледяная вода). Правильный баланс жиров и специй создает насыщенный вкус, а «отбивание» фарша делает их нежными.',
     imageUrl: timerImage1,
     durationSeconds: 6000,
+    minDurationSeconds: 4800,
     timeShiftSeconds: 200,
     startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -28,6 +33,7 @@ const mockTimers: Timer[] = [
     description: 'Кря-кря-кря',
     imageUrl: timerImage2,
     durationSeconds: 10,
+    minDurationSeconds: 5,
     timeShiftSeconds: 0,
     startedAt: new Date().toISOString(),
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -42,6 +48,7 @@ const mockTimers: Timer[] = [
     description: 'Просто ждать и ничего не делать',
     imageUrl: timerImage3,
     durationSeconds: 3600,
+    minDurationSeconds: null,
     timeShiftSeconds: 0,
     startedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -56,6 +63,7 @@ const mockTimers: Timer[] = [
     description: 'Тут у вас уже всё просрачено, можно не смотреть',
     imageUrl: timerImage4,
     durationSeconds: 10,
+    minDurationSeconds: 5,
     timeShiftSeconds: 0,
     startedAt: new Date(Date.now() - 1000 * 60).toISOString(),
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -70,6 +78,7 @@ const mockTimers: Timer[] = [
     description: 'Просто заглушка',
     imageUrl: '',
     durationSeconds: 60,
+    minDurationSeconds: null,
     timeShiftSeconds: 0,
     startedAt: new Date().toISOString(),
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -101,6 +110,7 @@ const createTimer = (payload: TimerFormPayload): Timer => {
     description: payload.description,
     imageUrl,
     durationSeconds: payload.durationMinutes * 60,
+    minDurationSeconds: toSecondsOrNull(payload.minDurationMinutes),
     timeShiftSeconds: 0,
     startedAt: now,
     lastRunBy: MOCK_CURRENT_USER_NAME,
@@ -128,6 +138,7 @@ const updateTimer = (
   timer.title = payload.title
   timer.description = payload.description
   timer.durationSeconds = payload.durationMinutes * 60
+  timer.minDurationSeconds = toSecondsOrNull(payload.minDurationMinutes)
   timer.updatedAt = new Date().toISOString()
 
   if (payload.removeImage) {

@@ -8,7 +8,13 @@ export function useTimerView(timer: Timer) {
   const mountedAt = Date.now()
 
   const effectiveDuration = computed(() => {
-    return timer.durationSeconds - timer.timeShiftSeconds
+    return Math.max(0, timer.durationSeconds - timer.timeShiftSeconds)
+  })
+
+  const effectiveMinDuration = computed(() => {
+    if (timer.minDurationSeconds === null) return null
+
+    return Math.max(0, timer.minDurationSeconds - timer.timeShiftSeconds)
   })
 
   const startedAtMs = computed(() => {
@@ -21,6 +27,16 @@ export function useTimerView(timer: Timer) {
 
   const remaining = computed(() => {
     return effectiveDuration.value - elapsed.value
+  })
+
+  const isMinDurationReached = computed(() => {
+    if (timer.status === 'stopped') return false
+    if (effectiveMinDuration.value === null) return false
+
+    return (
+      elapsed.value >= effectiveMinDuration.value &&
+      elapsed.value < effectiveDuration.value
+    )
   })
 
   const viewStatus = computed<TimerViewStatus>(() => {
@@ -56,8 +72,10 @@ export function useTimerView(timer: Timer) {
 
   return {
     effectiveDuration,
+    effectiveMinDuration,
     elapsed,
     remaining,
+    isMinDurationReached,
     viewStatus,
     statusLabel,
   }

@@ -66,14 +66,20 @@ const viewStatusPriority: Record<TimerViewStatus, number> = {
   completed: 3,
 }
 
+function getEffectiveDuration(timer: Timer) {
+  return Math.max(0, timer.durationSeconds - timer.timeShiftSeconds)
+}
+
+function getElapsed(timer: Timer) {
+  const startedAtMs = new Date(timer.startedAt).getTime()
+
+  return Math.floor((now.value - startedAtMs) / 1000)
+}
+
 function getRemaining(timer: Timer) {
   if (timer.status === 'stopped') return 0
 
-  const effectiveDuration = timer.durationSeconds - timer.timeShiftSeconds
-  const startedAtMs = new Date(timer.startedAt).getTime()
-  const elapsed = Math.floor((now.value - startedAtMs) / 1000)
-
-  return effectiveDuration - elapsed
+  return getEffectiveDuration(timer) - getElapsed(timer)
 }
 
 function getViewStatus(timer: Timer): TimerViewStatus {
@@ -83,7 +89,7 @@ function getViewStatus(timer: Timer): TimerViewStatus {
 
   if (remaining <= 0) {
     const finishedAt =
-      new Date(timer.startedAt).getTime() + (timer.durationSeconds - timer.timeShiftSeconds) * 1000
+      new Date(timer.startedAt).getTime() + getEffectiveDuration(timer) * 1000
 
     if (finishedAt <= pageOpenedAt) {
       return 'completed'
