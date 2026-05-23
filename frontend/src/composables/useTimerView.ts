@@ -1,11 +1,11 @@
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import type { Timer, TimerViewStatus } from '../types/timer'
 import { useNow } from '../utils/useNow'
 import { isTimerCompleted } from '../utils/completedTimers'
 
 export function useTimerView(timer: Timer) {
   const { now } = useNow()
-  const wasExpiredOnMount = ref(false)
+  const mountedAt = Date.now()
 
   const effectiveDuration = computed(() => {
     return timer.durationSeconds - timer.timeShiftSeconds
@@ -23,17 +23,13 @@ export function useTimerView(timer: Timer) {
     return effectiveDuration.value - elapsed.value
   })
 
-  onMounted(() => {
-    const finishedAt = startedAtMs.value + effectiveDuration.value * 1000
-
-    wasExpiredOnMount.value = finishedAt <= Date.now()
-  })
-
   const viewStatus = computed<TimerViewStatus>(() => {
     if (timer.status === 'stopped') return 'stopped'
 
     if (remaining.value <= 0) {
-      if (wasExpiredOnMount.value) {
+      const finishedAt = startedAtMs.value + effectiveDuration.value * 1000
+
+      if (startedAtMs.value < mountedAt && finishedAt <= mountedAt) {
         return 'completed'
       }
 
