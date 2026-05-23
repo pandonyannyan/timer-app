@@ -175,7 +175,7 @@ function completeTimer() {
 
   stopAudio()
 
-  addCompletedTimer(props.timer.id)
+  addCompletedTimer(props.timer.id, props.timer.startedAt)
 }
 
 function togglePin() {

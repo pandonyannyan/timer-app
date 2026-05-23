@@ -89,7 +89,7 @@ function getViewStatus(timer: Timer): TimerViewStatus {
       return 'completed'
     }
 
-    if (isTimerCompleted(timer.id)) {
+    if (isTimerCompleted(timer.id, timer.startedAt)) {
       return 'completed'
     }
 
