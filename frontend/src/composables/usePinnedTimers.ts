@@ -1,34 +1,7 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
+import { pinnedTimerService } from '../services/pinnedTimerService'
 
-const STORAGE_KEY = 'timer-app:pinned-timer-ids'
-
-const pinnedTimerIds = ref<string[]>(loadPinnedTimerIds())
-
-function loadPinnedTimerIds(): string[] {
-  try {
-    const rawValue = localStorage.getItem(STORAGE_KEY)
-
-    if (!rawValue) {
-      return []
-    }
-
-    const parsedValue = JSON.parse(rawValue)
-
-    return Array.isArray(parsedValue)
-      ? parsedValue.filter((value): value is string => typeof value === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
-
-watch(
-  pinnedTimerIds,
-  (value) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
-  },
-  { deep: true },
-)
+const pinnedTimerIds = ref<string[]>(pinnedTimerService.getPinnedTimers())
 
 export function usePinnedTimers() {
   const pinnedCount = computed(() => pinnedTimerIds.value.length)
@@ -38,15 +11,11 @@ export function usePinnedTimers() {
   }
 
   function pinTimer(timerId: string): void {
-    if (isTimerPinned(timerId)) {
-      return
-    }
-
-    pinnedTimerIds.value = [...pinnedTimerIds.value, timerId]
+    pinnedTimerIds.value = pinnedTimerService.pinTimer(timerId)
   }
 
   function unpinTimer(timerId: string): void {
-    pinnedTimerIds.value = pinnedTimerIds.value.filter((id) => id !== timerId)
+    pinnedTimerIds.value = pinnedTimerService.unpinTimer(timerId)
   }
 
   function togglePinnedTimer(timerId: string): void {
@@ -59,11 +28,11 @@ export function usePinnedTimers() {
   }
 
   function reorderPinnedTimers(timerIds: string[]): void {
-    pinnedTimerIds.value = [...timerIds]
+    pinnedTimerIds.value = pinnedTimerService.reorderPinnedTimers(timerIds)
   }
 
   function removePinnedTimer(timerId: string): void {
-    unpinTimer(timerId)
+    pinnedTimerIds.value = pinnedTimerService.removePinnedTimer(timerId)
   }
 
   return {
