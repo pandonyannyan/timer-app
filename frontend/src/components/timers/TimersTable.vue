@@ -94,6 +94,8 @@ function handleDragEnd() {
   --timers-grid-columns: 44px 200px 115px minmax(260px, 1fr) 105px 110px 230px 190px;
   --timers-grid-gap: 18px;
 
+  container-type: inline-size;
+
   background: #eef3f7;
   border-radius: 20px;
   padding: 18px 12px 10px;
@@ -158,5 +160,11 @@ function handleDragEnd() {
   color: #6b7280;
   background: white;
   border-radius: 16px;
+}
+
+@container (max-width: 1400px) {
+  .header {
+    display: none;
+  }
 }
 </style>

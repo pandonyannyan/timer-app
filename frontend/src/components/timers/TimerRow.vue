@@ -782,4 +782,101 @@ function handleDeleteTimer() {
 .duration {
   white-space: nowrap;
 }
+
+@container (max-width: 1400px) {
+  .row {
+    font-size: 14px;
+    grid-template-columns: 34px 1fr auto;
+    grid-template-areas:
+      "pin name status"
+      "pin desc desc"
+      "pin duration duration"
+      "pin time time"
+      "pin last-run last-run"
+      "pin actions actions";
+
+    gap: 12px 14px;
+    align-items: start;
+
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .pin-cell {
+    grid-area: pin;
+    align-self: start;
+  }
+
+  .name {
+    grid-area: name;
+  }
+
+  .row > div:nth-child(3) {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .desc {
+    grid-area: desc;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+  }
+
+  .duration {
+    grid-area: duration;
+  }
+
+  .duration::before {
+    content: "Длительность: ";
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  .time {
+    grid-area: time;
+  }
+
+  .time::before {
+    content: "Осталось: ";
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  .last-run {
+    grid-area: last-run;
+  }
+
+  .last-run::before {
+    content: "Последний запуск: ";
+    display: block;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  .last-run-main {
+    flex-wrap: wrap;
+    gap: 6px;
+    white-space: normal;
+  }
+
+  .actions {
+    grid-area: actions;
+    justify-self: stretch;
+    justify-content: flex-end;
+    width: 100%;
+    padding-top: 4px;
+  }
+
+  .desc,
+  .duration,
+  .last-run,
+  .user {
+    font-size: 14px;
+  }
+
+  .time {
+    font-size: 15px;
+  }
+}
 </style>
