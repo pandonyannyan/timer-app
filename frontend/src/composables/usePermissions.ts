@@ -1,17 +1,11 @@
-import { computed, ref } from 'vue'
-
-type UserRole = 'admin' | 'manager' | 'member'
-
-// Для проверки прав можно временно менять роль:
-//
-// const currentRole = ref<UserRole>('admin')
-// const currentRole = ref<UserRole>('manager')
-// const currentRole = ref<UserRole>('member')
-//
-// Потом это место заменим на реальную роль пользователя из БД / auth.
-const currentRole = ref<UserRole>('admin')
+import { computed } from 'vue'
+import { useAuthStore } from '../stores/auth'
 
 export function usePermissions() {
+  const authStore = useAuthStore()
+
+  const currentRole = computed(() => authStore.role)
+
   const canManageTimers = computed(() => {
     return currentRole.value === 'admin' || currentRole.value === 'manager'
   })
@@ -19,9 +13,9 @@ export function usePermissions() {
   return {
     currentRole,
 
-    // Доступно всем ролям
-    canRestartTimer: computed(() => true),
-    canStopTimer: computed(() => true),
+    // Доступно всем авторизованным активным пользователям
+    canRestartTimer: computed(() => authStore.isAuthenticated && authStore.isActiveUser),
+    canStopTimer: computed(() => authStore.isAuthenticated && authStore.isActiveUser),
 
     // admin + manager
     canCreateTimer: canManageTimers,

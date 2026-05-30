@@ -1,6 +1,26 @@
 <template>
   <div class="timers-page">
-    <h1 class="title">Командный трекер</h1>
+    <header class="page-header">
+      <div>
+        <h1 class="title">Командный трекер</h1>
+
+        <p class="user-info">
+          {{ authStore.profile?.email }}
+          <span v-if="authStore.profile?.role">
+            · {{ roleLabel }}
+          </span>
+        </p>
+      </div>
+
+      <button
+        class="logout-button"
+        type="button"
+        :disabled="authStore.isLoading"
+        @click="handleLogout"
+      >
+        Выйти
+      </button>
+    </header>
 
     <TimersToolbar
       v-model:search-query="searchQuery"
@@ -22,8 +42,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import TimersToolbar from '../components/timers/TimersToolbar.vue'
 import TimersTable from '../components/timers/TimersTable.vue'
+import { useAuthStore } from '../stores/auth'
 import { useTimersStore } from '../stores/timers'
 import { usePinnedTimers } from '../composables/usePinnedTimers'
 import { useNow } from '../utils/useNow'
@@ -32,6 +54,8 @@ import type { Timer, TimerViewStatus } from '../types/timer'
 
 type StatusFilter = 'all' | 'active'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const timersStore = useTimersStore()
 const { now } = useNow()
 
@@ -53,6 +77,14 @@ const reorderDraftPinnedTimerIds = ref<string[]>([])
 
 const canReorderPinnedTimers = computed(() => pinnedCount.value > 1)
 
+const roleLabel = computed(() => {
+  if (authStore.profile?.role === 'admin') return 'admin'
+  if (authStore.profile?.role === 'manager') return 'manager'
+  if (authStore.profile?.role === 'member') return 'member'
+
+  return 'Пользователь'
+})
+
 const currentPinnedTimerIds = computed(() => {
   return isReorderMode.value
     ? reorderDraftPinnedTimerIds.value
@@ -65,6 +97,11 @@ const viewStatusPriority: Record<TimerViewStatus, number> = {
   active: 2,
   stopped: 3,
   completed: 4,
+}
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/login')
 }
 
 function getEffectiveDuration(timer: Timer) {
@@ -224,10 +261,42 @@ function handleReorder(nextTimers: Timer[]) {
   width: 100%;
 }
 
-.title {
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin: 0 0 24px;
+}
+
+.title {
+  margin: 0;
   color: #111827;
   font-size: 28px;
   font-weight: 700;
+}
+
+.user-info {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.logout-button {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.logout-button:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.logout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 </style>
