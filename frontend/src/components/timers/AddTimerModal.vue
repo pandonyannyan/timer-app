@@ -51,7 +51,7 @@
             v-model="durationInput"
             :class="['field-input', { invalid: isDurationInvalid }]"
             type="text"
-            inputmode="numeric"
+            inputmode="text"
           />
 
           <p class="error error-slot">
@@ -134,7 +134,9 @@ const title = ref(props.timer?.title ?? '')
 const description = ref(props.timer?.description ?? '')
 const durationInput = ref(
   props.timer
-    ? String(Math.round(props.timer.durationSeconds / 60))
+    ? props.timer.minDurationSeconds === null
+      ? String(Math.round(props.timer.durationSeconds / 60))
+      : `${Math.round(props.timer.minDurationSeconds / 60)}-${Math.round(props.timer.durationSeconds / 60)}`
     : '5'
 )
 const imageFile = ref<File | null>(null)
@@ -171,14 +173,31 @@ const titleErrorMessage = computed(() => {
   return ''
 })
 
-const isValidDurationFormat = computed(() => {
-  return /^\d+$/.test(durationInput.value)
+const parsedDuration = computed(() => {
+  const value = durationInput.value.trim()
+  const match = value.match(/^(\d+)(?:\s*-\s*(\d+))?$/)
+
+  if (!match) return null
+
+  const firstValue = Number(match[1])
+  const secondValue = match[2] ? Number(match[2]) : null
+
+  return {
+    minDurationMinutes: secondValue === null ? null : firstValue,
+    durationMinutes: secondValue === null ? firstValue : secondValue,
+  }
 })
 
 const durationMinutes = computed(() => {
-  if (!isValidDurationFormat.value) return 0
+  return parsedDuration.value?.durationMinutes ?? 0
+})
 
-  return Number(durationInput.value)
+const minDurationMinutes = computed(() => {
+  return parsedDuration.value?.minDurationMinutes ?? null
+})
+
+const isValidDurationFormat = computed(() => {
+  return parsedDuration.value !== null
 })
 
 const isDurationTooSmall = computed(() => {
@@ -189,15 +208,27 @@ const isDurationTooLarge = computed(() => {
   return isValidDurationFormat.value && durationMinutes.value > MAX_DURATION_MINUTES
 })
 
+const isMinDurationTooSmall = computed(() => {
+  return minDurationMinutes.value !== null &&
+    minDurationMinutes.value < MIN_DURATION_MINUTES
+})
+
+const isMinDurationTooLarge = computed(() => {
+  return minDurationMinutes.value !== null &&
+    minDurationMinutes.value >= durationMinutes.value
+})
+
 const isDurationInvalid = computed(() => {
   return !isValidDurationFormat.value ||
     isDurationTooSmall.value ||
-    isDurationTooLarge.value
+    isDurationTooLarge.value ||
+    isMinDurationTooSmall.value ||
+    isMinDurationTooLarge.value
 })
 
 const durationErrorMessage = computed(() => {
   if (!isValidDurationFormat.value) {
-    return 'Введите целое количество минут'
+    return 'Введите количество минут или диапазон, например 100 или 100-120'
   }
 
   if (isDurationTooSmall.value) {
@@ -206,6 +237,14 @@ const durationErrorMessage = computed(() => {
 
   if (isDurationTooLarge.value) {
     return 'Максимальная длительность — 24 часа (1440 минут)'
+  }
+
+  if (isMinDurationTooSmall.value) {
+    return 'Минимальная длительность диапазона — 1 минута'
+  }
+
+  if (isMinDurationTooLarge.value) {
+    return 'Минимальная длительность должна быть меньше максимальной'
   }
 
   return ''
@@ -272,7 +311,7 @@ function submit() {
     title: trimmedTitle.value,
     description: trimmedDescription.value,
     durationMinutes: durationMinutes.value,
-    minDurationMinutes: null,
+    minDurationMinutes: minDurationMinutes.value,
     imageFile: imageFile.value,
     removeImage: shouldRemoveImage.value,
   })

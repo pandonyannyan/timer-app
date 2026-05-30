@@ -56,12 +56,17 @@ export function useTimerView(timer: Timer) {
       return 'signal'
     }
 
+    if (isMinDurationReached.value) {
+      return 'warning'
+    }
+
     return 'active'
   })
 
   const statusLabel = computed(() => {
     const labels: Record<TimerViewStatus, string> = {
       active: 'Активен',
+      warning: 'Внимание',
       stopped: 'Остановлен',
       signal: 'Сигнал',
       completed: 'Завершён',

@@ -1,6 +1,11 @@
 export type TimerStatus = 'active' | 'stopped'
 
-export type TimerViewStatus = 'active' | 'stopped' | 'signal' | 'completed'
+export type TimerViewStatus =
+  | 'active'
+  | 'warning'
+  | 'stopped'
+  | 'signal'
+  | 'completed'
 
 export interface Timer {
   id: string

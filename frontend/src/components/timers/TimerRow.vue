@@ -10,7 +10,8 @@ import {
 import { useTimerView } from '../../composables/useTimerView'
 import { usePinnedTimers } from '../../composables/usePinnedTimers'
 import { usePermissions } from '../../composables/usePermissions'
-import beepSound from '../../assets/sounds/beep.mp3'
+import signalSound from '../../assets/sounds/beep.mp3'
+import warningSound from '../../assets/sounds/warning-beep.mp3'
 import { useTimersStore } from '../../stores/timers'
 import RestartTimerModal from './RestartTimerModal.vue'
 import AddTimerModal from './AddTimerModal.vue'
@@ -54,10 +55,17 @@ const {
   remaining,
   viewStatus,
   statusLabel,
+  isMinDurationReached,
 } = useTimerView(props.timer)
 
-const audio = new Audio(beepSound)
+const signalAudio = new Audio(signalSound)
+const warningAudio = new Audio(warningSound)
+
+signalAudio.loop = false
+warningAudio.loop = false
+
 const hasPlayedSound = ref(false)
+const hasPlayedWarningSound = ref(false)
 const soundEnabled = ref(isSoundEnabled(props.timer.id))
 
 const effectiveSoundEnabled = computed(() => {
@@ -81,8 +89,13 @@ const pinButtonTitle = computed(() => {
 })
 
 function stopAudio() {
-  audio.pause()
-  audio.currentTime = 0
+  signalAudio.pause()
+  signalAudio.currentTime = 0
+}
+
+function stopWarningAudio() {
+  warningAudio.pause()
+  warningAudio.currentTime = 0
 }
 
 function playSignalSound() {
@@ -90,32 +103,60 @@ function playSignalSound() {
   if (!effectiveSoundEnabled.value) return
   if (hasPlayedSound.value) return
 
-  audio.currentTime = 0
+  signalAudio.currentTime = 0
 
-  audio.play().catch(() => {
+  signalAudio.play().catch(() => {
     // Браузер может заблокировать звук, если пользователь ещё не кликал по странице
   })
 
   hasPlayedSound.value = true
 }
 
+function playWarningSound() {
+  if (viewStatus.value !== 'warning') return
+  if (!isMinDurationReached.value) return
+  if (!effectiveSoundEnabled.value) return
+  if (hasPlayedWarningSound.value) return
+
+  warningAudio.currentTime = 0
+
+  warningAudio.play().catch(() => {
+    // Браузер может заблокировать звук, если пользователь ещё не кликал по странице
+  })
+
+  hasPlayedWarningSound.value = true
+}
+
 watch(viewStatus, () => {
+  playWarningSound()
   playSignalSound()
 })
 
 watch(effectiveSoundEnabled, (enabled) => {
   if (!enabled) {
     stopAudio()
+    stopWarningAudio()
     return
   }
 
+  playWarningSound()
   playSignalSound()
 })
 
-const canStop = computed(() => viewStatus.value === 'active')
+const canStop = computed(() => {
+  return viewStatus.value === 'active' || viewStatus.value === 'warning'
+})
 
-const durationMinutes = computed(() => {
-  return Math.round(props.timer.durationSeconds / 60)
+const durationLabel = computed(() => {
+  const durationMinutes = Math.round(props.timer.durationSeconds / 60)
+
+  if (props.timer.minDurationSeconds === null) {
+    return `${durationMinutes} мин`
+  }
+
+  const minDurationMinutes = Math.round(props.timer.minDurationSeconds / 60)
+
+  return `${minDurationMinutes}-${durationMinutes} мин`
 })
 
 const shiftMinutes = computed(() => {
@@ -174,6 +215,7 @@ function completeTimer() {
   if (props.isReorderMode) return
 
   stopAudio()
+  stopWarningAudio()
 
   addCompletedTimer(props.timer.id, props.timer.startedAt)
 }
@@ -205,7 +247,9 @@ function handleRestart(timeShiftSeconds: number) {
   timersStore.restartTimer(props.timer.id, timeShiftSeconds)
 
   hasPlayedSound.value = false
+  hasPlayedWarningSound.value = false
   stopAudio()
+  stopWarningAudio()
 
   closeRestartModal()
 }
@@ -237,6 +281,7 @@ function stopTimer() {
   timersStore.stopTimer(props.timer.id)
 
   stopAudio()
+  stopWarningAudio()
 }
 
 function openEditModal() {
@@ -263,6 +308,7 @@ function openDeleteModal() {
 
 function handleDeleteTimer() {
   stopAudio()
+  stopWarningAudio()
 
   removePinnedTimer(props.timer.id)
   timersStore.deleteTimer(props.timer.id)
@@ -272,7 +318,15 @@ function handleDeleteTimer() {
 </script>
 
 <template>
-  <div :class="['row', { highlighted: viewStatus === 'signal' }]">
+  <div
+    :class="[
+      'row',
+      {
+        highlighted: viewStatus === 'signal',
+        warning: viewStatus === 'warning',
+      },
+    ]"
+  > 
     <div class="pin-cell">
       <span
         v-if="isReorderMode"
@@ -326,8 +380,8 @@ function handleDeleteTimer() {
       {{ timer.description }}
     </div>
 
-    <div>
-      {{ durationMinutes }} мин
+    <div class="duration">
+      {{ durationLabel }}
     </div>
 
     <div class="time">
@@ -459,7 +513,11 @@ function handleDeleteTimer() {
 .row.highlighted {
   border-color: #6f89ad;
   background: #f9fbff;
-  box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.row.warning {
+  border-color: #b8a985;
+  background: #f9fbff;
 }
 
 .pin-cell {
@@ -603,6 +661,12 @@ function handleDeleteTimer() {
 }
 
 .status.stopped {
+  color: #6b7280;
+  border-color: #cfd5dd;
+  background: #f3f4f6;
+}
+
+.status.warning {
   color: #8c7755;
   border-color: #b8a985;
   background: #fbf5e8;
@@ -713,5 +777,9 @@ function handleDeleteTimer() {
 
 .complete-btn:disabled:hover {
   background: #6f89ad;
+}
+
+.duration {
+  white-space: nowrap;
 }
 </style>

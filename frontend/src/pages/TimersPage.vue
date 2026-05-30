@@ -61,13 +61,20 @@ const currentPinnedTimerIds = computed(() => {
 
 const viewStatusPriority: Record<TimerViewStatus, number> = {
   signal: 0,
-  active: 1,
-  stopped: 2,
-  completed: 3,
+  warning: 1,
+  active: 2,
+  stopped: 3,
+  completed: 4,
 }
 
 function getEffectiveDuration(timer: Timer) {
   return Math.max(0, timer.durationSeconds - timer.timeShiftSeconds)
+}
+
+function getEffectiveMinDuration(timer: Timer) {
+  if (timer.minDurationSeconds === null) return null
+
+  return Math.max(0, timer.minDurationSeconds - timer.timeShiftSeconds)
 }
 
 function getElapsed(timer: Timer) {
@@ -80,6 +87,19 @@ function getRemaining(timer: Timer) {
   if (timer.status === 'stopped') return 0
 
   return getEffectiveDuration(timer) - getElapsed(timer)
+}
+
+function isMinDurationReached(timer: Timer) {
+  if (timer.status === 'stopped') return false
+
+  const effectiveMinDuration = getEffectiveMinDuration(timer)
+
+  if (effectiveMinDuration === null) return false
+
+  const elapsed = getElapsed(timer)
+  const effectiveDuration = getEffectiveDuration(timer)
+
+  return elapsed >= effectiveMinDuration && elapsed < effectiveDuration
 }
 
 function getViewStatus(timer: Timer): TimerViewStatus {
@@ -100,6 +120,10 @@ function getViewStatus(timer: Timer): TimerViewStatus {
     }
 
     return 'signal'
+  }
+
+  if (isMinDurationReached(timer)) {
+    return 'warning'
   }
 
   return 'active'
@@ -142,7 +166,11 @@ const filteredTimers = computed(() => {
     const viewStatus = getViewStatus(timer)
 
     if (statusFilter.value === 'active') {
-      if (viewStatus !== 'active' && viewStatus !== 'signal') {
+      if (
+        viewStatus !== 'active' &&
+        viewStatus !== 'warning' &&
+        viewStatus !== 'signal'
+      ) {
         return false
       }
     }
