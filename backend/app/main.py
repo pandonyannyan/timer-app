@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.me import router as me_router
+from app.api.timers import router as timers_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -20,7 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(me_router)
-
+app.include_router(timers_router)
 
 @app.get("/")
 def read_root() -> dict[str, str]:
