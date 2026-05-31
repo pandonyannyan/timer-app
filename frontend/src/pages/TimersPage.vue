@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import TimersToolbar from '../components/timers/TimersToolbar.vue'
 import TimersTable from '../components/timers/TimersTable.vue'
@@ -58,6 +58,10 @@ const router = useRouter()
 const authStore = useAuthStore()
 const timersStore = useTimersStore()
 const { now } = useNow()
+
+onMounted(async () => {
+  await timersStore.loadTimers()
+})
 
 const {
   pinnedTimerIds,

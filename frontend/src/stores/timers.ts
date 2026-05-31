@@ -5,12 +5,12 @@ import { removeCompletedTimer } from '../utils/completedTimers'
 
 export const useTimersStore = defineStore('timers', {
   state: () => ({
-    timers: timerService.getTimers() as Timer[],
+    timers: [] as Timer[],
   }),
 
   actions: {
-    loadTimers() {
-      this.timers = timerService.getTimers()
+    async loadTimers() {
+      this.timers = await timerService.getTimers()
     },
 
     createTimer(payload: TimerFormPayload) {

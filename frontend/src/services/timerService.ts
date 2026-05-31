@@ -1,4 +1,5 @@
 import type { Timer, TimerFormPayload } from '../types/timer'
+import { getCurrentSession } from './authService'
 
 import timerImage1 from '../assets/timer-images/img1.jpg'
 import timerImage2 from '../assets/timer-images/img2.jpg'
@@ -113,8 +114,32 @@ const cloneTimer = (timer: Timer): Timer => {
   return { ...timer }
 }
 
-const getTimers = (): Timer[] => {
-  return mockTimers.map(cloneTimer)
+const getTimers = async (): Promise<Timer[]> => {
+  const session = await getCurrentSession()
+
+  if (!session) {
+    throw new Error('No active session')
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+  if (!apiBaseUrl) {
+    throw new Error('VITE_API_BASE_URL is not set')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/timers`, {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(`Failed to load timers: ${response.status} ${JSON.stringify(data)}`)
+  }
+
+  return data
 }
 
 const createTimer = (payload: TimerFormPayload): Timer => {
