@@ -8,19 +8,19 @@ export const useTimersStore = defineStore('timers', {
     timers: [] as Timer[],
   }),
 
-  actions: {
+ actions: {
     async loadTimers() {
       this.timers = await timerService.getTimers()
     },
 
-    createTimer(payload: TimerFormPayload) {
-      const timer = timerService.createTimer(payload)
+    async createTimer(payload: TimerFormPayload) {
+      const timer = await timerService.createTimer(payload)
 
       this.timers.unshift(timer)
     },
 
-    updateTimer(timerId: string, payload: TimerFormPayload) {
-      const updatedTimer = timerService.updateTimer(timerId, payload)
+    async updateTimer(timerId: string, payload: TimerFormPayload) {
+      const updatedTimer = await timerService.updateTimer(timerId, payload)
 
       if (!updatedTimer) {
         return
@@ -35,8 +35,8 @@ export const useTimersStore = defineStore('timers', {
       Object.assign(this.timers[timerIndex], updatedTimer)
     },
 
-    deleteTimer(timerId: string) {
-      const isDeleted = timerService.deleteTimer(timerId)
+    async deleteTimer(timerId: string) {
+      const isDeleted = await timerService.deleteTimer(timerId)
 
       if (!isDeleted) {
         return

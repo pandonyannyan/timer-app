@@ -171,9 +171,13 @@ function closeAddTimerModal() {
   blurActiveElement()
 }
 
-function handleCreateTimer(payload: TimerFormPayload) {
-  timersStore.createTimer(payload)
-  closeAddTimerModal()
+async function handleCreateTimer(payload: TimerFormPayload) {
+  try {
+    await timersStore.createTimer(payload)
+    closeAddTimerModal()
+  } catch (error) {
+    console.error('Failed to create timer', error)
+  }
 }
 </script>
 

@@ -1,120 +1,11 @@
 import type { Timer, TimerFormPayload } from '../types/timer'
 import { getCurrentSession } from './authService'
 
-import timerImage1 from '../assets/timer-images/img1.jpg'
-import timerImage2 from '../assets/timer-images/img2.jpg'
-import timerImage3 from '../assets/timer-images/img3.jpg'
-import timerImage4 from '../assets/timer-images/img4.gif'
-
-const MOCK_CURRENT_USER_NAME = 'Pupok Pupochkov'
-
 const toSecondsOrNull = (minutes: number | null): number | null => {
   return minutes === null ? null : minutes * 60
 }
 
-const now = Date.now()
-const iso = (offsetSeconds = 0) => {
-  return new Date(now + offsetSeconds * 1000).toISOString()
-}
-
-const mockTimers: Timer[] = [
-  {
-    id: '1',
-    title: 'Обычный активный таймер',
-    description: 'Таймер без минимальной длительности. Должен быть в статусе Активен.',
-    imageUrl: timerImage1,
-    durationSeconds: 60 * 100,
-    minDurationSeconds: null,
-    timeShiftSeconds: 0,
-    startedAt: iso(-60 * 10),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: true,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-  {
-    id: '2',
-    title: 'Диапазон до warning',
-    description: 'Таймер с диапазоном 80-100 минут. Минимальная длительность ещё не наступила.',
-    imageUrl: timerImage2,
-    durationSeconds: 60 * 100,
-    minDurationSeconds: 60 * 80,
-    timeShiftSeconds: 0,
-    startedAt: iso(-60 * 10),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: true,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-  {
-    id: '3',
-    title: 'Диапазон в warning',
-    description: 'Минимальная длительность уже наступила, но полная ещё нет. Должен быть статус Внимание.',
-    imageUrl: timerImage3,
-    durationSeconds: 60 * 100,
-    minDurationSeconds: 60 * 80,
-    timeShiftSeconds: 0,
-    startedAt: iso(-60 * 85),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: true,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-  {
-    id: '4',
-    title: 'Скоро финальный сигнал',
-    description: 'Короткий таймер для проверки перехода из warning в signal.',
-    imageUrl: timerImage4,
-    durationSeconds: 60,
-    minDurationSeconds: 30,
-    timeShiftSeconds: 0,
-    startedAt: iso(-45),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: true,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-  {
-    id: '5',
-    title: 'Уже завершённый при открытии',
-    description: 'Таймер истёк до открытия страницы. Должен отображаться как Завершён.',
-    imageUrl: '',
-    durationSeconds: 60,
-    minDurationSeconds: 30,
-    timeShiftSeconds: 0,
-    startedAt: iso(-60 * 5),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: false,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-  {
-    id: '6',
-    title: 'Остановленный таймер',
-    description: 'Остановленный таймер с диапазоном. Должен быть серым и показывать 00:00:00.',
-    imageUrl: '',
-    durationSeconds: 60 * 120,
-    minDurationSeconds: 60 * 100,
-    timeShiftSeconds: 0,
-    startedAt: iso(-60 * 30),
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'stopped',
-    soundEnabled: false,
-    createdAt: iso(),
-    updatedAt: iso(),
-  },
-]
-
-const cloneTimer = (timer: Timer): Timer => {
-  return { ...timer }
-}
-
-const getTimers = async (): Promise<Timer[]> => {
+const getApiConfig = async () => {
   const session = await getCurrentSession()
 
   if (!session) {
@@ -127,9 +18,18 @@ const getTimers = async (): Promise<Timer[]> => {
     throw new Error('VITE_API_BASE_URL is not set')
   }
 
+  return {
+    apiBaseUrl,
+    accessToken: session.access_token,
+  }
+}
+
+const getTimers = async (): Promise<Timer[]> => {
+  const { apiBaseUrl, accessToken } = await getApiConfig()
+
   const response = await fetch(`${apiBaseUrl}/timers`, {
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   })
 
@@ -142,67 +42,94 @@ const getTimers = async (): Promise<Timer[]> => {
   return data
 }
 
-const createTimer = (payload: TimerFormPayload): Timer => {
-  const now = new Date().toISOString()
+const createTimer = async (payload: TimerFormPayload): Promise<Timer> => {
+  const { apiBaseUrl, accessToken } = await getApiConfig()
 
-  const imageUrl = payload.imageFile
-    ? URL.createObjectURL(payload.imageFile)
-    : undefined
+  const response = await fetch(`${apiBaseUrl}/timers`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: payload.title,
+      description: payload.description,
+      imageUrl: null,
+      durationSeconds: payload.durationMinutes * 60,
+      minDurationSeconds: toSecondsOrNull(payload.minDurationMinutes),
+      timeShiftSeconds: 0,
+      soundEnabled: true,
+    }),
+  })
 
-  const timer: Timer = {
-    id: crypto.randomUUID(),
-    title: payload.title,
-    description: payload.description,
-    imageUrl,
-    durationSeconds: payload.durationMinutes * 60,
-    minDurationSeconds: toSecondsOrNull(payload.minDurationMinutes),
-    timeShiftSeconds: 0,
-    startedAt: now,
-    lastRunBy: MOCK_CURRENT_USER_NAME,
-    status: 'active',
-    soundEnabled: true,
-    createdAt: now,
-    updatedAt: now,
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(`Failed to create timer: ${response.status} ${JSON.stringify(data)}`)
   }
 
-  mockTimers.unshift(timer)
-
-  return cloneTimer(timer)
+  return data
 }
 
-const updateTimer = (
+const updateTimer = async (
   timerId: string,
   payload: TimerFormPayload,
-): Timer | null => {
-  const timer = mockTimers.find(timer => timer.id === timerId)
+): Promise<Timer | null> => {
+  const { apiBaseUrl, accessToken } = await getApiConfig()
 
-  if (!timer) {
+  const response = await fetch(`${apiBaseUrl}/timers/${timerId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: payload.title,
+      description: payload.description,
+      imageUrl: payload.removeImage ? null : undefined,
+      durationSeconds: payload.durationMinutes * 60,
+      minDurationSeconds: toSecondsOrNull(payload.minDurationMinutes),
+    }),
+  })
+
+  const data = await response.json()
+
+  if (response.status === 404) {
     return null
   }
 
-  timer.title = payload.title
-  timer.description = payload.description
-  timer.durationSeconds = payload.durationMinutes * 60
-  timer.minDurationSeconds = toSecondsOrNull(payload.minDurationMinutes)
-  timer.updatedAt = new Date().toISOString()
-
-  if (payload.removeImage) {
-    timer.imageUrl = undefined
-  } else if (payload.imageFile) {
-    timer.imageUrl = URL.createObjectURL(payload.imageFile)
+  if (!response.ok) {
+    throw new Error(`Failed to update timer: ${response.status} ${JSON.stringify(data)}`)
   }
 
-  return cloneTimer(timer)
+  return data
 }
 
-const deleteTimer = (timerId: string): boolean => {
-  const timerIndex = mockTimers.findIndex(timer => timer.id === timerId)
+const deleteTimer = async (timerId: string): Promise<boolean> => {
+  const { apiBaseUrl, accessToken } = await getApiConfig()
 
-  if (timerIndex === -1) {
+  const response = await fetch(`${apiBaseUrl}/timers/${timerId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (response.status === 404) {
     return false
   }
 
-  mockTimers.splice(timerIndex, 1)
+  if (!response.ok) {
+    let errorDetails = ''
+
+    try {
+      errorDetails = JSON.stringify(await response.json())
+    } catch {
+      errorDetails = response.statusText
+    }
+
+    throw new Error(`Failed to delete timer: ${response.status} ${errorDetails}`)
+  }
 
   return true
 }
@@ -211,22 +138,12 @@ const restartTimer = async (
   timerId: string,
   timeShiftSeconds = 0,
 ): Promise<Timer | null> => {
-  const session = await getCurrentSession()
-
-  if (!session) {
-    throw new Error('No active session')
-  }
-
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
-
-  if (!apiBaseUrl) {
-    throw new Error('VITE_API_BASE_URL is not set')
-  }
+  const { apiBaseUrl, accessToken } = await getApiConfig()
 
   const response = await fetch(`${apiBaseUrl}/timers/${timerId}/restart`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -247,23 +164,15 @@ const restartTimer = async (
   return data
 }
 
-const stopTimer = async (timerId: string): Promise<Timer | null> => {
-  const session = await getCurrentSession()
-
-  if (!session) {
-    throw new Error('No active session')
-  }
-
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
-
-  if (!apiBaseUrl) {
-    throw new Error('VITE_API_BASE_URL is not set')
-  }
+const stopTimer = async (
+  timerId: string,
+): Promise<Timer | null> => {
+  const { apiBaseUrl, accessToken } = await getApiConfig()
 
   const response = await fetch(`${apiBaseUrl}/timers/${timerId}/stop`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   })
 

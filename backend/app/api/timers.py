@@ -2,10 +2,64 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.core.supabase import get_supabase_client
-from app.schemas.timer import TimerResponse, TimerRestartRequest
+from app.schemas.timer import (
+    TimerCreateRequest,
+    TimerResponse,
+    TimerRestartRequest,
+    TimerUpdateRequest,
+)
 
 
 router = APIRouter(prefix="/timers", tags=["timers"])
+
+
+def require_timer_manager(current_user: CurrentUser) -> None:
+    if current_user.role not in ("admin", "manager"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+
+
+def map_timer_create_payload(payload: TimerCreateRequest, user_id: str) -> dict:
+    return {
+        "title": payload.title,
+        "description": payload.description,
+        "image_url": payload.imageUrl,
+        "duration_seconds": payload.durationSeconds,
+        "min_duration_seconds": payload.minDurationSeconds,
+        "time_shift_seconds": payload.timeShiftSeconds,
+        "status": "active",
+        "last_run_by": user_id,
+        "created_by": user_id,
+        "updated_by": user_id,
+    }
+
+
+def map_timer_update_payload(payload: TimerUpdateRequest, user_id: str) -> dict:
+    update_data = {}
+
+    if payload.title is not None:
+        update_data["title"] = payload.title
+
+    if payload.description is not None:
+        update_data["description"] = payload.description
+
+    if payload.imageUrl is not None:
+        update_data["image_url"] = payload.imageUrl
+
+    if payload.durationSeconds is not None:
+        update_data["duration_seconds"] = payload.durationSeconds
+
+    if payload.minDurationSeconds is not None:
+        update_data["min_duration_seconds"] = payload.minDurationSeconds
+
+    if payload.timeShiftSeconds is not None:
+        update_data["time_shift_seconds"] = payload.timeShiftSeconds
+
+    update_data["updated_by"] = user_id
+
+    return update_data
 
 
 def map_timer_response(timer: dict) -> TimerResponse:
@@ -70,6 +124,160 @@ async def get_timers(
         map_timer_response(timer)
         for timer in response.data
     ]
+
+
+@router.post("", response_model=TimerResponse, status_code=status.HTTP_201_CREATED)
+async def create_timer(
+    payload: TimerCreateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> TimerResponse:
+    require_timer_manager(current_user)
+
+    supabase = get_supabase_client()
+
+    create_data = map_timer_create_payload(
+        payload=payload,
+        user_id=current_user.id,
+    )
+
+    created_timer_response = (
+        supabase.table("timers")
+        .insert(create_data)
+        .execute()
+    )
+
+    created_timer = created_timer_response.data[0] if created_timer_response.data else None
+
+    if not created_timer:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create timer",
+        )
+
+    log_timer_action(
+        timer_id=created_timer["id"],
+        user_id=current_user.id,
+        action="created",
+        old_status=None,
+        new_status=created_timer["status"],
+        details={},
+    )
+
+    return map_timer_response(created_timer)
+
+
+@router.patch("/{timer_id}", response_model=TimerResponse)
+async def update_timer(
+    timer_id: str,
+    payload: TimerUpdateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> TimerResponse:
+    require_timer_manager(current_user)
+
+    supabase = get_supabase_client()
+
+    update_data = map_timer_update_payload(
+        payload=payload,
+        user_id=current_user.id,
+    )
+
+    if len(update_data) == 1 and "updated_by" in update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update",
+        )
+
+    existing_timer_response = (
+        supabase.table("timers")
+        .select("id, status")
+        .eq("id", timer_id)
+        .single()
+        .execute()
+    )
+
+    existing_timer = existing_timer_response.data
+
+    if not existing_timer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Timer not found",
+        )
+
+    updated_timer_response = (
+        supabase.table("timers")
+        .update(update_data)
+        .eq("id", timer_id)
+        .execute()
+    )
+
+    updated_timer = updated_timer_response.data[0] if updated_timer_response.data else None
+
+    if not updated_timer:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update timer",
+        )
+
+    log_timer_action(
+        timer_id=timer_id,
+        user_id=current_user.id,
+        action="updated",
+        old_status=existing_timer["status"],
+        new_status=updated_timer["status"],
+        details={
+            "updatedFields": [
+                key
+                for key in update_data.keys()
+                if key != "updated_by"
+            ],
+        },
+    )
+
+    return map_timer_response(updated_timer)
+
+
+@router.delete("/{timer_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_timer(
+    timer_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> None:
+    require_timer_manager(current_user)
+
+    supabase = get_supabase_client()
+
+    existing_timer_response = (
+        supabase.table("timers")
+        .select("id, status")
+        .eq("id", timer_id)
+        .single()
+        .execute()
+    )
+
+    existing_timer = existing_timer_response.data
+
+    if not existing_timer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Timer not found",
+        )
+
+    log_timer_action(
+        timer_id=timer_id,
+        user_id=current_user.id,
+        action="deleted",
+        old_status=existing_timer["status"],
+        new_status=None,
+        details={},
+    )
+
+    (
+        supabase.table("timers")
+        .delete()
+        .eq("id", timer_id)
+        .execute()
+    )
+
+    return None
 
 
 @router.post(
