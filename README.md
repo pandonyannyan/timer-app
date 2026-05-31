@@ -31,9 +31,12 @@ Frontend находится в рабочем состоянии и опубли
 - Supabase Auth;
 - получение профиля пользователя и роли из Supabase;
 - защита frontend routes;
-- FastAPI backend skeleton с `/health` endpoint.
+- FastAPI backend с `/health`, `/me`, `GET /timers`, `restart` и `stop`;
+- backend-проверка Bearer token через Supabase Auth;
+- чтение таймеров, restart и stop через FastAPI;
+- логирование restart/stop в `timer_logs`.
 
-Таймеры всё ещё работают через mock-реализацию в `frontend/src/services/timerService.ts`. Backend mutations таймеров пока не подключены.
+Чтение таймеров, restart и stop уже идут через FastAPI. Добавление, редактирование и удаление таймеров пока остаются во временной frontend/mock-реализации.
 
 ---
 

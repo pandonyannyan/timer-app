@@ -29,16 +29,20 @@ Frontend интеграция с Supabase частично выполнена:
 - роль пользователя берётся из `profiles.role`;
 - `usePermissions.ts` больше не использует mock-роль.
 
-Backend skeleton создан:
+Backend частично интегрирован с Supabase:
 
-- FastAPI-приложение в `backend/`;
-- env-config через `pydantic-settings`;
-- CORS подготовлен;
-- `GET /health` работает локально.
-
-Таймеры пока работают через mock service layer в `frontend/src/services/timerService.ts`.
+- добавлен backend Supabase config;
+- реализована проверка Bearer token;
+- реализован `GET /me`;
+- реализован `GET /timers`;
+- реализованы `POST /timers/{timer_id}/restart` и `POST /timers/{timer_id}/stop`;
+- restart и stop пишут записи в `timer_logs`;
+- основная страница читает таймеры через FastAPI;
+- основные действия restart/stop на странице таймеров идут через FastAPI.
 
 ---
+
+## Реализовано на текущем этапе
 
 ## Реализовано на текущем этапе
 
@@ -52,7 +56,9 @@ Backend skeleton создан:
 - обычная длительность и диапазоны длительности;
 - warning-состояние;
 - warning/signal-звуки;
-- добавление, редактирование, удаление, перезапуск и остановка таймеров через mock service layer;
+- чтение таймеров через FastAPI;
+- перезапуск и остановка таймеров через FastAPI;
+- добавление, редактирование и удаление таймеров пока через временную frontend/mock-реализацию;
 - перезапуск со сдвигом;
 - локальное завершение конкретного запуска таймера;
 - поиск и фильтр активных таймеров;
@@ -77,20 +83,23 @@ Backend skeleton создан:
 ### Backend
 
 - структура `backend/app`;
-- `backend/app/main.py`;
-- `backend/app/core/config.py`;
-- `backend/requirements.txt`;
-- `backend/.env.example`;
-- endpoint `GET /health`.
+- env-config через `pydantic-settings`;
+- Supabase backend client;
+- проверка Bearer token через Supabase Auth;
+- получение текущего пользователя и профиля;
+- endpoint `GET /health`;
+- endpoint `GET /me`;
+- endpoint `GET /timers`;
+- endpoint `POST /timers/{timer_id}/restart`;
+- endpoint `POST /timers/{timer_id}/stop`;
+- логирование restart/stop в `timer_logs`.
 
 ---
 
 ## Временные решения и ограничения
 
-- `timerService` пока использует mock-данные;
-- изменения таймеров не сохраняются после перезагрузки;
-- backend ещё не подключён к Supabase Auth и БД;
-- FastAPI пока не выполняет timer mutations;
+- добавление, редактирование и удаление таймеров пока остаются во временной frontend/mock-реализации;
+- restart и stop уже сохраняются в Supabase через FastAPI;
 - закрепления и настройки звука пока хранятся в `localStorage`;
 - изображения в UI всё ещё могут использовать временный frontend-flow, полноценная загрузка в Storage не подключена;
 - realtime-обновления таймеров ещё не подключены;
@@ -114,46 +123,28 @@ Backend skeleton создан:
 
 ## Ближайший план
 
-### 1. Подключить FastAPI к Supabase Auth
-
-Нужно реализовать:
-
-- backend env для Supabase URL и secret/service key;
-- проверку Bearer token;
-- получение текущего пользователя;
-- получение профиля пользователя;
-- `GET /me`.
-
-### 2. Реализовать backend timer read
-
-- `GET /timers` через FastAPI;
-- маппинг DB rows → API response;
-- frontend service для чтения таймеров через backend.
-
-### 3. Реализовать timer mutations
+### 1. Реализовать оставшиеся timer mutations
 
 Рекомендуемый порядок:
 
-1. `POST /timers/{timer_id}/restart`;
-2. `POST /timers/{timer_id}/stop`;
-3. `POST /timers`;
-4. `PATCH /timers/{timer_id}`;
-5. `DELETE /timers/{timer_id}`.
+1. `POST /timers`;
+2. `PATCH /timers/{timer_id}`;
+3. `DELETE /timers/{timer_id}`.
 
 Для каждого mutation:
 
 - проверять роль;
 - валидировать данные;
-- писать `updated_by` / `last_run_by`;
+- писать `created_by` / `updated_by`;
 - логировать действие в `timer_logs`.
 
-### 4. Перенести персональные данные из localStorage
+### 2. Перенести персональные данные из localStorage
 
 - `user_pinned_timers`;
 - `user_settings`;
 - `timer_user_settings`.
 
-### 5. Подключить Storage и Realtime
+### 3. Подключить Storage и Realtime
 
 - загрузка изображений таймеров через FastAPI в Supabase Storage;
 - realtime-подписка на изменения `timers`.
