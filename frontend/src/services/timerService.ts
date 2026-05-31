@@ -207,25 +207,44 @@ const deleteTimer = (timerId: string): boolean => {
   return true
 }
 
-const restartTimer = (
+const restartTimer = async (
   timerId: string,
   timeShiftSeconds = 0,
-): Timer | null => {
-  const timer = mockTimers.find(timer => timer.id === timerId)
+): Promise<Timer | null> => {
+  const session = await getCurrentSession()
 
-  if (!timer) {
+  if (!session) {
+    throw new Error('No active session')
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+  if (!apiBaseUrl) {
+    throw new Error('VITE_API_BASE_URL is not set')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/timers/${timerId}/restart`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      timeShiftSeconds,
+    }),
+  })
+
+  const data = await response.json()
+
+  if (response.status === 404) {
     return null
   }
 
-  const now = new Date().toISOString()
+  if (!response.ok) {
+    throw new Error(`Failed to restart timer: ${response.status} ${JSON.stringify(data)}`)
+  }
 
-  timer.status = 'active'
-  timer.startedAt = now
-  timer.lastRunBy = MOCK_CURRENT_USER_NAME
-  timer.timeShiftSeconds = timeShiftSeconds
-  timer.updatedAt = now
-
-  return cloneTimer(timer)
+  return data
 }
 
 const stopTimer = (timerId: string): Timer | null => {

@@ -47,8 +47,8 @@ export const useTimersStore = defineStore('timers', {
       this.timers = this.timers.filter(timer => timer.id !== timerId)
     },
 
-    restartTimer(timerId: string, timeShiftSeconds = 0) {
-      const updatedTimer = timerService.restartTimer(timerId, timeShiftSeconds)
+    async restartTimer(timerId: string, timeShiftSeconds = 0) {
+      const updatedTimer = await timerService.restartTimer(timerId, timeShiftSeconds)
 
       if (!updatedTimer) {
         return

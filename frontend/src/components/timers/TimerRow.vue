@@ -243,15 +243,19 @@ function openRestartModal() {
   blurActiveElement()
 }
 
-function handleRestart(timeShiftSeconds: number) {
-  timersStore.restartTimer(props.timer.id, timeShiftSeconds)
+async function handleRestart(timeShiftSeconds: number) {
+  try {
+    await timersStore.restartTimer(props.timer.id, timeShiftSeconds)
 
-  hasPlayedSound.value = false
-  hasPlayedWarningSound.value = false
-  stopAudio()
-  stopWarningAudio()
+    hasPlayedSound.value = false
+    hasPlayedWarningSound.value = false
+    stopAudio()
+    stopWarningAudio()
 
-  closeRestartModal()
+    closeRestartModal()
+  } catch (error) {
+    console.error('Failed to restart timer', error)
+  }
 }
 
 function blurActiveElement() {
