@@ -29,3 +29,9 @@ class TimerResponse(BaseModel):
         "populate_by_name": True,
     }
     
+class TimerRestartRequest(BaseModel):
+    time_shift_seconds: int = Field(default=0, alias="timeShiftSeconds")
+
+    model_config = {
+        "populate_by_name": True,
+    }

@@ -167,6 +167,71 @@ async function handleGetBackendTimers() {
     isLoading.value = false
   }
 }
+
+async function handleRestartBackendTimer() {
+  try {
+    isLoading.value = true
+    message.value = ''
+
+    const session = await getCurrentSession()
+
+    if (!session) {
+      message.value = 'No active session'
+      return
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+    if (!apiBaseUrl) {
+      message.value = 'VITE_API_BASE_URL is not set'
+      return
+    }
+
+    const timersResponse = await fetch(`${apiBaseUrl}/timers`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const timers = await timersResponse.json()
+
+    if (!timersResponse.ok) {
+      message.value = `Backend /timers failed: ${timersResponse.status} ${JSON.stringify(timers)}`
+      return
+    }
+
+    if (!timers.length) {
+      message.value = 'No timers to restart'
+      return
+    }
+
+    const timerId = timers[0].id
+
+    const response = await fetch(`${apiBaseUrl}/timers/${timerId}/restart`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        timeShiftSeconds: 0,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      message.value = `Backend restart failed: ${response.status} ${JSON.stringify(data)}`
+      return
+    }
+
+    message.value = `Backend timer restarted: ${data.title}, status: ${data.status}`
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : 'Unknown error'
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -213,6 +278,10 @@ async function handleGetBackendTimers() {
 
     <button :disabled="isLoading" @click="handleGetBackendTimers">
       Get backend timers
+    </button>
+
+    <button :disabled="isLoading" @click="handleRestartBackendTimer">
+      Restart backend timer
     </button>
 
     <p>{{ message }}</p>
