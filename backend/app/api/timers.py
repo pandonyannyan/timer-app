@@ -8,7 +8,25 @@ from app.schemas.timer import TimerResponse, TimerRestartRequest
 router = APIRouter(prefix="/timers", tags=["timers"])
 
 
-@router.get("", response_model=list[TimerResponse], response_model_by_alias=True)
+def map_timer_response(timer: dict) -> TimerResponse:
+    return TimerResponse(
+        id=timer["id"],
+        title=timer["title"],
+        description=timer["description"],
+        imageUrl=timer["image_url"],
+        durationSeconds=timer["duration_seconds"],
+        minDurationSeconds=timer["min_duration_seconds"],
+        timeShiftSeconds=timer["time_shift_seconds"],
+        startedAt=timer["started_at"],
+        lastRunBy=timer["last_run_by"],
+        status=timer["status"],
+        createdAt=timer["created_at"],
+        updatedAt=timer["updated_at"],
+        soundEnabled=True,
+    )
+
+
+@router.get("", response_model=list[TimerResponse])
 async def get_timers(
     current_user: CurrentUser = Depends(get_current_user),
 ) -> list[TimerResponse]:
@@ -26,14 +44,14 @@ async def get_timers(
     )
 
     return [
-        TimerResponse.model_validate(timer)
+        map_timer_response(timer)
         for timer in response.data
     ]
+
 
 @router.post(
     "/{timer_id}/restart",
     response_model=TimerResponse,
-    response_model_by_alias=True,
 )
 async def restart_timer(
     timer_id: str,
@@ -60,18 +78,18 @@ async def restart_timer(
 
     duration_seconds = timer["duration_seconds"]
 
-    if payload.time_shift_seconds < 0 or payload.time_shift_seconds > duration_seconds:
+    if payload.timeShiftSeconds < 0 or payload.timeShiftSeconds > duration_seconds:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid timeShiftSeconds",
         )
 
-    update_response = (
+    (
         supabase.table("timers")
         .update(
             {
                 "status": "active",
-                "time_shift_seconds": payload.time_shift_seconds,
+                "time_shift_seconds": payload.timeShiftSeconds,
                 "started_at": "now()",
                 "last_run_by": current_user.id,
                 "updated_by": current_user.id,
@@ -101,12 +119,12 @@ async def restart_timer(
             detail="Timer not found",
         )
 
-    return TimerResponse.model_validate(updated_timer)
+    return map_timer_response(updated_timer)
+
 
 @router.post(
     "/{timer_id}/stop",
     response_model=TimerResponse,
-    response_model_by_alias=True,
 )
 async def stop_timer(
     timer_id: str,
@@ -130,12 +148,17 @@ async def stop_timer(
             detail="Timer not found",
         )
 
-    supabase.table("timers").update(
-        {
-            "status": "stopped",
-            "updated_by": current_user.id,
-        }
-    ).eq("id", timer_id).execute()
+    (
+        supabase.table("timers")
+        .update(
+            {
+                "status": "stopped",
+                "updated_by": current_user.id,
+            }
+        )
+        .eq("id", timer_id)
+        .execute()
+    )
 
     updated_timer_response = (
         supabase.table("timers")
@@ -157,5 +180,4 @@ async def stop_timer(
             detail="Timer not found",
         )
 
-    return TimerResponse.model_validate(updated_timer)
-
+    return map_timer_response(updated_timer)

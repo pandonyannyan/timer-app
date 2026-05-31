@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class TimerResponse(BaseModel):
@@ -9,29 +9,22 @@ class TimerResponse(BaseModel):
 
     title: str
     description: str
-    image_url: str | None = Field(alias="imageUrl")
+    imageUrl: str | None
 
-    duration_seconds: int = Field(alias="durationSeconds")
-    min_duration_seconds: int | None = Field(alias="minDurationSeconds")
-    time_shift_seconds: int = Field(alias="timeShiftSeconds")
+    durationSeconds: int
+    minDurationSeconds: int | None
+    timeShiftSeconds: int
 
-    started_at: datetime = Field(alias="startedAt")
-    last_run_by: str | None = Field(alias="lastRunBy")
+    startedAt: datetime
+    lastRunBy: str | None
 
     status: Literal["active", "stopped"]
 
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: datetime = Field(alias="updatedAt")
+    createdAt: datetime
+    updatedAt: datetime
 
-    sound_enabled: bool = Field(default=True, alias="soundEnabled")
+    soundEnabled: bool = True
 
-    model_config = {
-        "populate_by_name": True,
-    }
-    
+
 class TimerRestartRequest(BaseModel):
-    time_shift_seconds: int = Field(default=0, alias="timeShiftSeconds")
-
-    model_config = {
-        "populate_by_name": True,
-    }
+    timeShiftSeconds: int = 0
