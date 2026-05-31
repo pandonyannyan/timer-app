@@ -87,6 +87,46 @@ async function handleGetTimers() {
     isLoading.value = false
   }
 }
+
+async function handleGetBackendMe() {
+  try {
+    isLoading.value = true
+    message.value = ''
+
+    const session = await getCurrentSession()
+
+    if (!session) {
+      message.value = 'No active session'
+      return
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+    if (!apiBaseUrl) {
+      message.value = 'VITE_API_BASE_URL is not set'
+      return
+    }
+
+    const response = await fetch(`${apiBaseUrl}/me`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      message.value = `Backend /me failed: ${response.status} ${JSON.stringify(data)}`
+      return
+    }
+
+    message.value = `Backend /me: ${data.email}, role: ${data.role}`
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : 'Unknown error'
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -125,6 +165,10 @@ async function handleGetTimers() {
 
     <button :disabled="isLoading" @click="handleGetTimers">
       Get timers
+    </button>
+
+    <button :disabled="isLoading" @click="handleGetBackendMe">
+      Get backend /me
     </button>
 
     <p>{{ message }}</p>

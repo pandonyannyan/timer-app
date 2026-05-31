@@ -4,4 +4,6 @@ dist
 .env.local
 .env.*.local
 
+backend/.env
+
 supabase/.temp

@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     app_env: str = "local"
     frontend_origins: str = "http://localhost:5173"
 
+    supabase_url: str
+    supabase_service_role_key: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
