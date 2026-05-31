@@ -26,6 +26,29 @@ def map_timer_response(timer: dict) -> TimerResponse:
     )
 
 
+def log_timer_action(
+    *,
+    timer_id: str,
+    user_id: str,
+    action: str,
+    old_status: str | None,
+    new_status: str | None,
+    details: dict,
+) -> None:
+    supabase = get_supabase_client()
+
+    supabase.table("timer_logs").insert(
+        {
+            "timer_id": timer_id,
+            "user_id": user_id,
+            "action": action,
+            "old_status": old_status,
+            "new_status": new_status,
+            "details": details,
+        }
+    ).execute()
+
+
 @router.get("", response_model=list[TimerResponse])
 async def get_timers(
     current_user: CurrentUser = Depends(get_current_user),
@@ -62,7 +85,7 @@ async def restart_timer(
 
     timer_response = (
         supabase.table("timers")
-        .select("id, duration_seconds")
+        .select("id, duration_seconds, status, time_shift_seconds, started_at")
         .eq("id", timer_id)
         .single()
         .execute()
@@ -97,6 +120,19 @@ async def restart_timer(
         )
         .eq("id", timer_id)
         .execute()
+    )
+
+    log_timer_action(
+        timer_id=timer_id,
+        user_id=current_user.id,
+        action="restarted",
+        old_status=timer["status"],
+        new_status="active",
+        details={
+            "oldTimeShiftSeconds": timer["time_shift_seconds"],
+            "newTimeShiftSeconds": payload.timeShiftSeconds,
+            "previousStartedAt": timer["started_at"],
+        },
     )
 
     updated_timer_response = (
@@ -134,7 +170,7 @@ async def stop_timer(
 
     timer_response = (
         supabase.table("timers")
-        .select("id")
+        .select("id, status")
         .eq("id", timer_id)
         .single()
         .execute()
@@ -158,6 +194,15 @@ async def stop_timer(
         )
         .eq("id", timer_id)
         .execute()
+    )
+
+    log_timer_action(
+        timer_id=timer_id,
+        user_id=current_user.id,
+        action="stopped",
+        old_status=timer["status"],
+        new_status="stopped",
+        details={},
     )
 
     updated_timer_response = (
