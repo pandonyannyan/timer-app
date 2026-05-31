@@ -35,14 +35,13 @@ Backend частично интегрирован с Supabase:
 - реализована проверка Bearer token;
 - реализован `GET /me`;
 - реализован `GET /timers`;
+- реализованы `POST /timers`, `PATCH /timers/{timer_id}` и `DELETE /timers/{timer_id}`;
 - реализованы `POST /timers/{timer_id}/restart` и `POST /timers/{timer_id}/stop`;
-- restart и stop пишут записи в `timer_logs`;
+- create/update/delete/restart/stop пишут записи в `timer_logs`;
 - основная страница читает таймеры через FastAPI;
-- основные действия restart/stop на странице таймеров идут через FastAPI.
+- основные действия с таймерами на странице идут через FastAPI.
 
 ---
-
-## Реализовано на текущем этапе
 
 ## Реализовано на текущем этапе
 
@@ -57,8 +56,7 @@ Backend частично интегрирован с Supabase:
 - warning-состояние;
 - warning/signal-звуки;
 - чтение таймеров через FastAPI;
-- перезапуск и остановка таймеров через FastAPI;
-- добавление, редактирование и удаление таймеров пока через временную frontend/mock-реализацию;
+- добавление, редактирование, удаление, перезапуск и остановка таймеров через FastAPI;
 - перезапуск со сдвигом;
 - локальное завершение конкретного запуска таймера;
 - поиск и фильтр активных таймеров;
@@ -90,15 +88,17 @@ Backend частично интегрирован с Supabase:
 - endpoint `GET /health`;
 - endpoint `GET /me`;
 - endpoint `GET /timers`;
+- endpoint `POST /timers`;
+- endpoint `PATCH /timers/{timer_id}`;
+- endpoint `DELETE /timers/{timer_id}`;
 - endpoint `POST /timers/{timer_id}/restart`;
 - endpoint `POST /timers/{timer_id}/stop`;
-- логирование restart/stop в `timer_logs`.
+- логирование create/update/delete/restart/stop в `timer_logs`.
 
 ---
 
 ## Временные решения и ограничения
 
-- добавление, редактирование и удаление таймеров пока остаются во временной frontend/mock-реализации;
 - restart и stop уже сохраняются в Supabase через FastAPI;
 - закрепления и настройки звука пока хранятся в `localStorage`;
 - изображения в UI всё ещё могут использовать временный frontend-flow, полноценная загрузка в Storage не подключена;
@@ -123,31 +123,20 @@ Backend частично интегрирован с Supabase:
 
 ## Ближайший план
 
-### 1. Реализовать оставшиеся timer mutations
-
-Рекомендуемый порядок:
-
-1. `POST /timers`;
-2. `PATCH /timers/{timer_id}`;
-3. `DELETE /timers/{timer_id}`.
-
-Для каждого mutation:
-
-- проверять роль;
-- валидировать данные;
-- писать `created_by` / `updated_by`;
-- логировать действие в `timer_logs`.
-
-### 2. Перенести персональные данные из localStorage
+### 1. Перенести персональные данные из localStorage
 
 - `user_pinned_timers`;
 - `user_settings`;
 - `timer_user_settings`.
 
-### 3. Подключить Storage и Realtime
+### 2. Подключить Storage и Realtime
 
 - загрузка изображений таймеров через FastAPI в Supabase Storage;
 - realtime-подписка на изменения `timers`.
+
+### 3. Удалить временный `/login-test`
+
+- убрать route и связанные временные диагностические элементы перед MVP.
 
 ---
 

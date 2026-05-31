@@ -36,19 +36,17 @@ Backend и инфраструктура:
 ## Текущая схема приложения
 
 ```txt
-```txt
 Vue + Pinia
 ↓
 Frontend service layer
 ↓
-FastAPI для чтения таймеров, restart и stop
+FastAPI для базового API таймеров
 ↓
 Supabase Auth
 Supabase Postgres
 ```
 
 Временные frontend-only/localStorage части пока остаются для:
-- добавления, редактирования и удаления таймеров;
 - закреплений;
 - пользовательских настроек звука;
 - локального completed.
@@ -286,11 +284,11 @@ Health/Auth:
 Таймеры:
 
 - `GET /timers` — реализовано;
+- `POST /timers` — реализовано;
+- `PATCH /timers/{timer_id}` — реализовано;
+- `DELETE /timers/{timer_id}` — реализовано;
 - `POST /timers/{timer_id}/restart` — реализовано;
-- `POST /timers/{timer_id}/stop` — реализовано;
-- `POST /timers` — план;
-- `PATCH /timers/{timer_id}` — план;
-- `DELETE /timers/{timer_id}` — план.
+- `POST /timers/{timer_id}/stop` — реализовано.
 
 Закрепления:
 
@@ -310,7 +308,6 @@ Health/Auth:
 
 ## Текущие временные решения
 
-- добавление, редактирование и удаление таймеров пока остаются во временной frontend/mock-реализации;
 - закрепления и порядок закреплённых таймеров пока в `localStorage`;
 - настройки звука пока в `localStorage`;
 - локальный `completed` остаётся frontend-only;
