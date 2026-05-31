@@ -247,17 +247,37 @@ const restartTimer = async (
   return data
 }
 
-const stopTimer = (timerId: string): Timer | null => {
-  const timer = mockTimers.find(timer => timer.id === timerId)
+const stopTimer = async (timerId: string): Promise<Timer | null> => {
+  const session = await getCurrentSession()
 
-  if (!timer) {
+  if (!session) {
+    throw new Error('No active session')
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+  if (!apiBaseUrl) {
+    throw new Error('VITE_API_BASE_URL is not set')
+  }
+
+  const response = await fetch(`${apiBaseUrl}/timers/${timerId}/stop`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  const data = await response.json()
+
+  if (response.status === 404) {
     return null
   }
 
-  timer.status = 'stopped'
-  timer.updatedAt = new Date().toISOString()
+  if (!response.ok) {
+    throw new Error(`Failed to stop timer: ${response.status} ${JSON.stringify(data)}`)
+  }
 
-  return cloneTimer(timer)
+  return data
 }
 
 export const timerService = {

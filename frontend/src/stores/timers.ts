@@ -65,8 +65,8 @@ export const useTimersStore = defineStore('timers', {
       Object.assign(this.timers[timerIndex], updatedTimer)
     },
 
-    stopTimer(timerId: string) {
-      const updatedTimer = timerService.stopTimer(timerId)
+    async stopTimer(timerId: string) {
+      const updatedTimer = await timerService.stopTimer(timerId)
 
       if (!updatedTimer) {
         return

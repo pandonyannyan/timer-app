@@ -232,6 +232,68 @@ async function handleRestartBackendTimer() {
     isLoading.value = false
   }
 }
+
+async function handleStopBackendTimer() {
+  try {
+    isLoading.value = true
+    message.value = ''
+
+    const session = await getCurrentSession()
+
+    if (!session) {
+      message.value = 'No active session'
+      return
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+
+    if (!apiBaseUrl) {
+      message.value = 'VITE_API_BASE_URL is not set'
+      return
+    }
+
+    const timersResponse = await fetch(`${apiBaseUrl}/timers`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const timers = await timersResponse.json()
+
+    if (!timersResponse.ok) {
+      message.value = `Backend /timers failed: ${timersResponse.status} ${JSON.stringify(timers)}`
+      return
+    }
+
+    if (!timers.length) {
+      message.value = 'No timers to stop'
+      return
+    }
+
+    const timerId = timers[0].id
+
+    const response = await fetch(`${apiBaseUrl}/timers/${timerId}/stop`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      message.value = `Backend stop failed: ${response.status} ${JSON.stringify(data)}`
+      return
+    }
+
+    message.value = `Backend timer stopped: ${data.title}, status: ${data.status}`
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : 'Unknown error'
+  } finally {
+    isLoading.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -282,6 +344,10 @@ async function handleRestartBackendTimer() {
 
     <button :disabled="isLoading" @click="handleRestartBackendTimer">
       Restart backend timer
+    </button>
+
+    <button :disabled="isLoading" @click="handleStopBackendTimer">
+      Stop backend timer
     </button>
 
     <p>{{ message }}</p>

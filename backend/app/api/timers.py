@@ -102,3 +102,60 @@ async def restart_timer(
         )
 
     return TimerResponse.model_validate(updated_timer)
+
+@router.post(
+    "/{timer_id}/stop",
+    response_model=TimerResponse,
+    response_model_by_alias=True,
+)
+async def stop_timer(
+    timer_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> TimerResponse:
+    supabase = get_supabase_client()
+
+    timer_response = (
+        supabase.table("timers")
+        .select("id")
+        .eq("id", timer_id)
+        .single()
+        .execute()
+    )
+
+    timer = timer_response.data
+
+    if not timer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Timer not found",
+        )
+
+    supabase.table("timers").update(
+        {
+            "status": "stopped",
+            "updated_by": current_user.id,
+        }
+    ).eq("id", timer_id).execute()
+
+    updated_timer_response = (
+        supabase.table("timers")
+        .select(
+            "id, title, description, image_url, duration_seconds, "
+            "min_duration_seconds, time_shift_seconds, started_at, "
+            "last_run_by, status, created_at, updated_at"
+        )
+        .eq("id", timer_id)
+        .single()
+        .execute()
+    )
+
+    updated_timer = updated_timer_response.data
+
+    if not updated_timer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Timer not found",
+        )
+
+    return TimerResponse.model_validate(updated_timer)
+

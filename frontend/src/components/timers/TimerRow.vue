@@ -279,13 +279,17 @@ function closeDeleteModal() {
   blurActiveElement()
 }
 
-function stopTimer() {
+async function stopTimer() {
   if (props.isReorderMode) return
 
-  timersStore.stopTimer(props.timer.id)
+  try {
+    await timersStore.stopTimer(props.timer.id)
 
-  stopAudio()
-  stopWarningAudio()
+    stopAudio()
+    stopWarningAudio()
+  } catch (error) {
+    console.error('Failed to stop timer', error)
+  }
 }
 
 function openEditModal() {
