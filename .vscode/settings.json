@@ -18,6 +18,7 @@
     "http",
     "net"
   ],
+  "python.terminal.activateEnvironment": false,
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   }

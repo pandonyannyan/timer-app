@@ -12,6 +12,8 @@ Timer App — веб-приложение для командной работы
 
 Frontend находится в рабочем состоянии и опубликован на GitHub Pages.
 
+Production API работает через Supabase Edge Function.
+
 Реализовано:
 
 - список таймеров;
@@ -31,13 +33,18 @@ Frontend находится в рабочем состоянии и опубли
 - Supabase Auth;
 - получение профиля пользователя и роли из Supabase;
 - защита frontend routes;
-- FastAPI backend с `/health`, `/me` и базовым API таймеров;
-- backend-проверка Bearer token через Supabase Auth;
-- чтение, создание, редактирование, удаление, перезапуск и остановка таймеров через FastAPI;
+- Supabase Edge Function API:
+  - `GET /health`;
+  - `GET /me`;
+  - `GET /timers`;
+  - `POST /timers`;
+  - `PATCH /timers/{timer_id}`;
+  - `DELETE /timers/{timer_id}`;
+  - `POST /timers/{timer_id}/restart`;
+  - `POST /timers/{timer_id}/stop`;
+- backend-проверка Bearer token;
+- backend-проверка ролей;
 - логирование create/update/delete/restart/stop в `timer_logs`.
-
-Базовые действия с таймерами уже идут через FastAPI: чтение, создание, редактирование, удаление, перезапуск и остановка.
-Для production рассматривается миграция backend API с FastAPI на Supabase Edge Functions, чтобы сохранить полностью бесплатную инфраструктуру без отдельного backend-хостинга.
 
 ---
 
@@ -54,13 +61,13 @@ Frontend:
 
 Backend и инфраструктура:
 
-- Python;
-- FastAPI;
+- Supabase Edge Functions;
 - Supabase Postgres;
 - Supabase Auth;
 - Supabase Storage;
 - Supabase Realtime;
-- GitHub Pages.
+- GitHub Pages;
+- GitHub Actions.
 
 ---
 
@@ -68,8 +75,7 @@ Backend и инфраструктура:
 
 ```txt
 frontend/    Vue-приложение
-backend/     FastAPI-приложение
-supabase/    Supabase config и миграции
+supabase/    Supabase config, migrations и Edge Functions
 docs/        Архитектура и рабочий прогресс
 ```
 
@@ -95,27 +101,33 @@ npm run build
 ```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://127.0.0.1:54321/functions/v1/api
 ```
 
-`VITE_SUPABASE_ANON_KEY` — publishable key. Secret/service key нельзя хранить во frontend.
+`VITE_SUPABASE_ANON_KEY` — publishable/anon key. Secret/service role key нельзя хранить во frontend.
 
 ---
 
-## Локальный запуск backend
+## Локальный запуск Supabase
+
+Для локальной разработки Supabase нужен Docker Desktop.
+
+Запуск локального Supabase stack:
 
 ```bash
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+supabase start
 ```
 
-Проверка:
+Локальный запуск Edge Function:
+
+```bash
+supabase functions serve api --no-verify-jwt
+```
+
+Проверка локального API:
 
 ```txt
-http://localhost:8000/health
+http://127.0.0.1:54321/functions/v1/api/health
 ```
 
 Ожидаемый ответ:
@@ -126,7 +138,25 @@ http://localhost:8000/health
 
 ---
 
+## Production API
+
+Production API находится в Supabase Edge Function:
+
+```txt
+https://khyqmlngemhhvtaawcqz.supabase.co/functions/v1/api
+```
+
+GitHub Pages frontend получает этот URL через build-time переменную:
+
+```env
+VITE_API_BASE_URL=https://khyqmlngemhhvtaawcqz.supabase.co/functions/v1/api
+```
+
+Переменные `VITE_*` должны быть доступны во время GitHub Actions build.
+
+---
+
 ## Документация
 
-- [`docs/architecture.md`](./docs/architecture.md) — архитектура, роли, правила данных, Supabase schema, RLS и план API;
+- [`docs/architecture.md`](./docs/architecture.md) — архитектура, роли, правила данных, Supabase schema, RLS и API;
 - [`docs/process.md`](./docs/process.md) — текущий прогресс, ограничения и ближайшие шаги.

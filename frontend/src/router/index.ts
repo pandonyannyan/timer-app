@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TimersPage from '../pages/TimersPage.vue'
-import LoginTestPage from '../pages/LoginTestPage.vue'
 import LoginPage from '../pages/LoginPage.vue'
 import { useAuthStore } from '../stores/auth'
 
@@ -13,14 +12,6 @@ export const router = createRouter({
       component: TimersPage,
       meta: {
         requiresAuth: true,
-      },
-    },
-    {
-      path: '/login-test',
-      name: 'login-test',
-      component: LoginTestPage,
-      meta: {
-        public: true,
       },
     },
     {

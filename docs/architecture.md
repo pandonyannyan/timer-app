@@ -23,13 +23,13 @@ Frontend:
 
 Backend и инфраструктура:
 
-- Python;
-- FastAPI;
+- Supabase Edge Functions;
 - Supabase Postgres;
 - Supabase Auth;
 - Supabase Storage;
 - Supabase Realtime;
-- GitHub Pages.
+- GitHub Pages;
+- GitHub Actions.
 
 ---
 
@@ -40,37 +40,26 @@ Vue + Pinia
 ↓
 Frontend service layer
 ↓
-FastAPI для базового API таймеров
-↓
-Supabase Auth
-Supabase Postgres
-```
-
-Временные frontend-only/localStorage части пока остаются для:
-- закреплений;
-- пользовательских настроек звука;
-- локального completed.
-
-Планируемое изменение backend-инфраструктуры:
-Для production рассматривается переход с FastAPI backend на Supabase Edge Functions.
-
-Причина: полностью бесплатный production без отдельного backend-хостинга и без долгого cold start, характерного для бесплатных web services после простоя.
-
-Текущий FastAPI backend остаётся рабочей реализацией и источником логики до завершения миграции.
-
-Целевая схема:
-
-```txt
-Vue + Pinia
-↓
-Frontend service layer
-↓
-Supabase Edge Functions
+Supabase Edge Function API
 ↓
 Supabase Auth
 Supabase Postgres
 Supabase Storage
 Supabase Realtime
+```
+
+Frontend опубликован на GitHub Pages.
+
+Production API находится в Supabase Edge Function:
+
+```txt
+https://khyqmlngemhhvtaawcqz.supabase.co/functions/v1/api
+```
+
+Frontend получает URL API через build-time переменную:
+
+```env
+VITE_API_BASE_URL=https://khyqmlngemhhvtaawcqz.supabase.co/functions/v1/api
 ```
 
 ---
@@ -81,7 +70,6 @@ Supabase Realtime
 |---|---|---|
 | `/` | реализовано | список таймеров, protected route |
 | `/login` | реализовано | вход по email/password |
-| `/login-test` | временно | диагностика Supabase Auth/RLS, удалить позже |
 | `/logs` | план | лог действий |
 | `/admin/users` | план | управление пользователями |
 
@@ -103,7 +91,7 @@ Frontend routes защищены через router guard.
 
 `usePermissions.ts` использует реальную роль из `authStore.profile`, а не mock-роль.
 
-Проверки на frontend не считаются безопасностью. Для глобальных действий с таймерами проверки должны быть продублированы в FastAPI и RLS.
+Проверки на frontend не считаются безопасностью. Для глобальных действий с таймерами проверки выполняются в Supabase Edge Function API и дополнительно ограничиваются RLS.
 
 ---
 
@@ -177,15 +165,15 @@ timerId + startedAt
 
 ## Время и timezone
 
-БД и backend работают с UTC.
+БД и backend API работают с UTC.
 
 Все даты в Supabase Postgres должны использовать `timestamptz`.
 
-Backend принимает, считает и отдаёт datetime в UTC.
+Edge Function принимает, считает и отдаёт datetime в UTC.
 
 Frontend отображает даты и время в локальной timezone пользователя.
 
-Frontend не должен отправлять `startedAt`, `createdAt`, `updatedAt` как источник истины. Серверное время фиксирует backend или БД.
+Frontend не должен отправлять `startedAt`, `createdAt`, `updatedAt` как источник истины. Серверное время фиксирует Edge Function или БД.
 
 Countdown рассчитывается по абсолютному времени:
 
@@ -234,14 +222,215 @@ Frontend Supabase client:
 - может работать со своими персональными настройками;
 - не может напрямую менять общие таймеры.
 
-FastAPI:
-- выполняет глобальные mutations;
-- проверяет роль;
+Supabase Edge Function API:
+- проверяет Bearer token;
+- получает профиль и роль пользователя;
+- выполняет глобальные mutations через service role client;
 - пишет логи;
 - работает с Storage.
 ```
 
-Для `timers` прямой `INSERT/UPDATE/DELETE` из frontend запрещён RLS. Глобальные изменения должны идти через FastAPI.
+Для `timers` прямой `INSERT/UPDATE/DELETE` из frontend запрещён RLS. Глобальные изменения должны идти через Supabase Edge Function API.
+
+Для `timer_logs` прямой `INSERT` из frontend запрещён RLS. Логи серверных действий пишет Edge Function.
+
+---
+
+## Edge Function API
+
+Основная Edge Function:
+
+```txt
+supabase/functions/api/index.ts
+```
+
+Production URL:
+
+```txt
+https://khyqmlngemhhvtaawcqz.supabase.co/functions/v1/api
+```
+
+Функция использует внутренний роутинг.
+
+Реализованные endpoints:
+
+Health/Auth:
+
+- `GET /health`;
+- `GET /me`.
+
+Таймеры:
+
+- `GET /timers`;
+- `POST /timers`;
+- `PATCH /timers/{timer_id}`;
+- `DELETE /timers/{timer_id}`;
+- `POST /timers/{timer_id}/restart`;
+- `POST /timers/{timer_id}/stop`.
+
+Принцип работы:
+
+- публичный `/health` используется для проверки доступности функции;
+- остальные endpoints требуют `Authorization: Bearer <access_token>`;
+- пользователь проверяется через Supabase Auth;
+- профиль и роль читаются из `profiles`;
+- create/update/delete доступны только `admin` и `manager`;
+- restart/stop доступны всем активным пользователям;
+- mutations выполняются через service role client внутри Edge Function;
+- create/update/delete/restart/stop пишут записи в `timer_logs`.
+
+---
+
+## API contracts
+
+### `GET /me`
+
+Возвращает текущего пользователя:
+
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "role": "admin",
+  "is_active": true
+}
+```
+
+### `GET /timers`
+
+Возвращает список таймеров:
+
+```json
+[
+  {
+    "id": "uuid",
+    "title": "Timer title",
+    "description": "",
+    "imageUrl": null,
+    "durationSeconds": 300,
+    "minDurationSeconds": null,
+    "timeShiftSeconds": 0,
+    "startedAt": "2026-06-03T17:18:28.340749+00:00",
+    "lastRunBy": "uuid",
+    "status": "active",
+    "createdAt": "2026-06-03T17:18:28.340749+00:00",
+    "updatedAt": "2026-06-03T17:18:28.340749+00:00",
+    "soundEnabled": true
+  }
+]
+```
+
+### `POST /timers`
+
+Создаёт таймер.
+
+Доступно:
+
+- `admin`;
+- `manager`.
+
+Тело запроса:
+
+```json
+{
+  "title": "Timer title",
+  "description": "",
+  "imageUrl": null,
+  "durationSeconds": 300,
+  "minDurationSeconds": null,
+  "timeShiftSeconds": 0,
+  "soundEnabled": true
+}
+```
+
+Пишет лог:
+
+```txt
+action = created
+```
+
+### `PATCH /timers/{timer_id}`
+
+Редактирует таймер.
+
+Доступно:
+
+- `admin`;
+- `manager`.
+
+Тело запроса частичное:
+
+```json
+{
+  "title": "Updated title",
+  "durationSeconds": 360
+}
+```
+
+Пишет лог:
+
+```txt
+action = updated
+details.updatedFields = [...]
+```
+
+### `DELETE /timers/{timer_id}`
+
+Удаляет таймер.
+
+Доступно:
+
+- `admin`;
+- `manager`.
+
+Пишет лог:
+
+```txt
+action = deleted
+```
+
+После удаления `timer_logs.timer_id` становится `null`, потому что FK настроен как `on delete set null`.
+
+### `POST /timers/{timer_id}/restart`
+
+Перезапускает таймер.
+
+Доступно:
+
+- `admin`;
+- `manager`;
+- `member`.
+
+Тело запроса:
+
+```json
+{
+  "timeShiftSeconds": 0
+}
+```
+
+Сервер:
+
+- устанавливает `status = active`;
+- обновляет `started_at`;
+- обновляет `time_shift_seconds`;
+- обновляет `last_run_by`;
+- пишет лог `restarted`.
+
+### `POST /timers/{timer_id}/stop`
+
+Останавливает таймер.
+
+Доступно:
+
+- `admin`;
+- `manager`;
+- `member`.
+
+Сервер:
+
+- устанавливает `status = stopped`;
+- пишет лог `stopped`.
 
 ---
 
@@ -260,8 +449,10 @@ timer-images
 Целевая загрузка изображений:
 
 ```txt
-Frontend → FastAPI → Supabase Storage → timers.image_url
+Frontend → Supabase Edge Function API → Supabase Storage → timers.image_url
 ```
+
+Полноценная загрузка изображений ещё не подключена.
 
 ---
 
@@ -279,23 +470,11 @@ MVP-события:
 
 Realtime для закреплений и пользовательских настроек не обязателен, потому что это персональные данные.
 
+Realtime-подписка на `timers` ещё не подключена.
+
 ---
 
-## Планируемый API
-
-Health/Auth:
-
-- `GET /health` — реализовано;
-- `GET /me` — реализовано.
-
-Таймеры:
-
-- `GET /timers` — реализовано;
-- `POST /timers` — реализовано;
-- `PATCH /timers/{timer_id}` — реализовано;
-- `DELETE /timers/{timer_id}` — реализовано;
-- `POST /timers/{timer_id}/restart` — реализовано;
-- `POST /timers/{timer_id}/stop` — реализовано.
+## Планируемые API
 
 Закрепления:
 
@@ -311,28 +490,6 @@ Health/Auth:
 - `PATCH /users/{id}/role`;
 - `PATCH /users/{id}/deactivate`.
 
-## План миграции backend на Supabase Edge Functions
-
-Цель — заменить отдельный FastAPI backend на Supabase Edge Functions для production.
-
-Планируемый подход:
-
-- использовать одну Edge Function как REST API с внутренним роутингом;
-- сохранить текущие frontend API-контракты насколько возможно;
-- перенести проверку Bearer-token;
-- перенести получение профиля и роли пользователя;
-- перенести `/me`;
-- перенести базовый timer API:
-  - `GET /timers`;
-  - `POST /timers`;
-  - `PATCH /timers/{timer_id}`;
-  - `DELETE /timers/{timer_id}`;
-  - `POST /timers/{timer_id}/restart`;
-  - `POST /timers/{timer_id}/stop`;
-- сохранить backend-проверку ролей;
-- сохранить логирование create/update/delete/restart/stop в `timer_logs`;
-- после успешной миграции решить, удалять FastAPI backend или оставить его как временный fallback.
-
 ---
 
 ## Текущие временные решения
@@ -340,4 +497,5 @@ Health/Auth:
 - закрепления и порядок закреплённых таймеров пока в `localStorage`;
 - настройки звука пока в `localStorage`;
 - локальный `completed` остаётся frontend-only;
-- `/login-test` временно оставлен для диагностики и должен быть удалён перед MVP.
+- загрузка изображений в Storage ещё не подключена;
+- realtime-обновления таймеров ещё не подключены.
