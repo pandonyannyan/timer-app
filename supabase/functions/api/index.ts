@@ -68,6 +68,10 @@ type TimerUpdateRequest = {
   soundEnabled?: boolean | null
 }
 
+type TimerRestartRequest = {
+  timeShiftSeconds?: number
+}
+
 type TimerCreateRow = {
   title: string
   description: string
@@ -763,6 +767,204 @@ async function deleteTimer(req: Request, timerId: string): Promise<Response> {
   })
 }
 
+function validateTimerRestartPayload(body: Record<string, unknown>): TimerRestartRequest | Response {
+  const timeShiftSeconds = body.timeShiftSeconds ?? 0
+
+  if (
+    typeof timeShiftSeconds !== 'number' ||
+    !Number.isInteger(timeShiftSeconds) ||
+    timeShiftSeconds < 0
+  ) {
+    return errorResponse('Invalid timeShiftSeconds', 400)
+  }
+
+  return {
+    timeShiftSeconds,
+  }
+}
+
+async function restartTimer(req: Request, timerId: string): Promise<Response> {
+  const currentUser = await getCurrentUser(req)
+
+  if (currentUser instanceof Response) {
+    return currentUser
+  }
+
+  const body = await parseJsonBody(req)
+
+  if (body instanceof Response) {
+    return body
+  }
+
+  const payload = validateTimerRestartPayload(body)
+
+  if (payload instanceof Response) {
+    return payload
+  }
+
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const { data: timer, error: timerError } = await supabase
+    .from('timers')
+    .select('id, duration_seconds, status, time_shift_seconds, started_at')
+    .eq('id', timerId)
+    .single()
+
+  if (timerError || !timer) {
+    return errorResponse('Timer not found', 404)
+  }
+
+  const existingTimer = timer as unknown as {
+    id: string
+    duration_seconds: number
+    status: TimerStatus
+    time_shift_seconds: number
+    started_at: string
+  }
+
+  const timeShiftSeconds = payload.timeShiftSeconds ?? 0
+
+  if (timeShiftSeconds > existingTimer.duration_seconds) {
+    return errorResponse('Invalid timeShiftSeconds', 400)
+  }
+
+  const { data, error } = await supabase
+    .from('timers')
+    .update({
+      status: 'active',
+      time_shift_seconds: timeShiftSeconds,
+      started_at: new Date().toISOString(),
+      last_run_by: currentUser.id,
+      updated_by: currentUser.id,
+    })
+    .eq('id', timerId)
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'image_url',
+        'duration_seconds',
+        'min_duration_seconds',
+        'time_shift_seconds',
+        'started_at',
+        'last_run_by',
+        'status',
+        'created_at',
+        'updated_at',
+      ].join(', '),
+    )
+    .single()
+
+  if (error || !data) {
+    return errorResponse('Failed to restart timer', 500)
+  }
+
+  const updatedTimer = data as unknown as TimerRow
+
+  const logError = await logTimerAction({
+    timerId,
+    userId: currentUser.id,
+    action: 'restarted',
+    oldStatus: existingTimer.status,
+    newStatus: 'active',
+    details: {
+      oldTimeShiftSeconds: existingTimer.time_shift_seconds,
+      newTimeShiftSeconds: timeShiftSeconds,
+      previousStartedAt: existingTimer.started_at,
+    },
+  })
+
+  if (logError) {
+    return logError
+  }
+
+  return jsonResponse(mapTimerResponse(updatedTimer))
+}
+
+async function stopTimer(req: Request, timerId: string): Promise<Response> {
+  const currentUser = await getCurrentUser(req)
+
+  if (currentUser instanceof Response) {
+    return currentUser
+  }
+
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const { data: timer, error: timerError } = await supabase
+    .from('timers')
+    .select('id, status')
+    .eq('id', timerId)
+    .single()
+
+  if (timerError || !timer) {
+    return errorResponse('Timer not found', 404)
+  }
+
+  const existingTimer = timer as unknown as {
+    id: string
+    status: TimerStatus
+  }
+
+  const { data, error } = await supabase
+    .from('timers')
+    .update({
+      status: 'stopped',
+      updated_by: currentUser.id,
+    })
+    .eq('id', timerId)
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'image_url',
+        'duration_seconds',
+        'min_duration_seconds',
+        'time_shift_seconds',
+        'started_at',
+        'last_run_by',
+        'status',
+        'created_at',
+        'updated_at',
+      ].join(', '),
+    )
+    .single()
+
+  if (error || !data) {
+    return errorResponse('Failed to stop timer', 500)
+  }
+
+  const updatedTimer = data as unknown as TimerRow
+
+  const logError = await logTimerAction({
+    timerId,
+    userId: currentUser.id,
+    action: 'stopped',
+    oldStatus: existingTimer.status,
+    newStatus: 'stopped',
+    details: {},
+  })
+
+  if (logError) {
+    return logError
+  }
+
+  return jsonResponse(mapTimerResponse(updatedTimer))
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -793,6 +995,18 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === 'POST' && pathname.endsWith('/timers')) {
     return await createTimer(req)
+  }
+
+  if (req.method === 'POST') {
+    const timerId = getTimerIdFromPath(pathname)
+
+    if (timerId && pathname.endsWith(`/timers/${timerId}/restart`)) {
+      return await restartTimer(req, timerId)
+    }
+
+    if (timerId && pathname.endsWith(`/timers/${timerId}/stop`)) {
+      return await stopTimer(req, timerId)
+    }
   }
 
   if (req.method === 'PATCH') {
