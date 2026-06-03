@@ -294,13 +294,6 @@ function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.preventDefault()
     close()
-    return
-  }
-
-  if (event.key === 'Enter') {
-    if (event.target instanceof HTMLTextAreaElement) return
-
-    event.preventDefault()
   }
 }
 
