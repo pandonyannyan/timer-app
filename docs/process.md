@@ -100,6 +100,7 @@ Backend частично интегрирован с Supabase:
 ## Временные решения и ограничения
 
 - restart и stop уже сохраняются в Supabase через FastAPI;
+- production backend ещё не развёрнут; для полностью бесплатного production планируется миграция backend API на Supabase Edge Functions вместо деплоя FastAPI на Render/Railway/Fly.io;
 - закрепления и настройки звука пока хранятся в `localStorage`;
 - изображения в UI всё ещё могут использовать временный frontend-flow, полноценная загрузка в Storage не подключена;
 - realtime-обновления таймеров ещё не подключены;
@@ -123,18 +124,41 @@ Backend частично интегрирован с Supabase:
 
 ## Ближайший план
 
-### 1. Перенести персональные данные из localStorage
+### 1. Перенести backend API на Supabase Edge Functions
+
+Цель — получить полностью бесплатный production backend без отдельного web-service-хостинга.
+
+План:
+
+- настроить Supabase CLI;
+- создать одну Edge Function для backend API;
+- реализовать простой health/ping endpoint;
+- перенести проверку Bearer token;
+- перенести получение профиля и роли пользователя;
+- перенести `GET /me`;
+- перенести timer API:
+  - `GET /timers`;
+  - `POST /timers`;
+  - `PATCH /timers/{timer_id}`;
+  - `DELETE /timers/{timer_id}`;
+  - `POST /timers/{timer_id}/restart`;
+  - `POST /timers/{timer_id}/stop`;
+- сохранить логирование действий в `timer_logs`;
+- подключить production frontend к Edge Function через `VITE_API_BASE_URL`;
+- проверить GitHub Pages production-сценарий.
+
+### 2. Перенести персональные данные из localStorage
 
 - `user_pinned_timers`;
 - `user_settings`;
 - `timer_user_settings`.
 
-### 2. Подключить Storage и Realtime
+### 3. Подключить Storage и Realtime
 
-- загрузка изображений таймеров через FastAPI в Supabase Storage;
+- загрузка изображений таймеров через Supabase Storage;
 - realtime-подписка на изменения `timers`.
 
-### 3. Удалить временный `/login-test`
+### 4. Удалить временный `/login-test`
 
 - убрать route и связанные временные диагностические элементы перед MVP.
 

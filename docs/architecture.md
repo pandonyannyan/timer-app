@@ -51,6 +51,13 @@ Supabase Postgres
 - пользовательских настроек звука;
 - локального completed.
 
+Планируемое изменение backend-инфраструктуры:
+Для production рассматривается переход с FastAPI backend на Supabase Edge Functions.
+
+Причина: полностью бесплатный production без отдельного backend-хостинга и без долгого cold start, характерного для бесплатных web services после простоя.
+
+Текущий FastAPI backend остаётся рабочей реализацией и источником логики до завершения миграции.
+
 Целевая схема:
 
 ```txt
@@ -58,7 +65,7 @@ Vue + Pinia
 ↓
 Frontend service layer
 ↓
-FastAPI
+Supabase Edge Functions
 ↓
 Supabase Auth
 Supabase Postgres
@@ -303,6 +310,28 @@ Health/Auth:
 - `GET /users`;
 - `PATCH /users/{id}/role`;
 - `PATCH /users/{id}/deactivate`.
+
+## План миграции backend на Supabase Edge Functions
+
+Цель — заменить отдельный FastAPI backend на Supabase Edge Functions для production.
+
+Планируемый подход:
+
+- использовать одну Edge Function как REST API с внутренним роутингом;
+- сохранить текущие frontend API-контракты насколько возможно;
+- перенести проверку Bearer-token;
+- перенести получение профиля и роли пользователя;
+- перенести `/me`;
+- перенести базовый timer API:
+  - `GET /timers`;
+  - `POST /timers`;
+  - `PATCH /timers/{timer_id}`;
+  - `DELETE /timers/{timer_id}`;
+  - `POST /timers/{timer_id}/restart`;
+  - `POST /timers/{timer_id}/stop`;
+- сохранить backend-проверку ролей;
+- сохранить логирование create/update/delete/restart/stop в `timer_logs`;
+- после успешной миграции решить, удалять FastAPI backend или оставить его как временный fallback.
 
 ---
 
