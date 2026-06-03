@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +48,53 @@ type TimerResponse = {
   soundEnabled: boolean
 }
 
+type TimerCreateRequest = {
+  title: string
+  description?: string
+  imageUrl?: string | null
+  durationSeconds: number
+  minDurationSeconds?: number | null
+  timeShiftSeconds?: number
+  soundEnabled?: boolean
+}
+
+type TimerCreateRow = {
+  title: string
+  description: string
+  image_url: string | null
+  duration_seconds: number
+  min_duration_seconds: number | null
+  time_shift_seconds: number
+  status: TimerStatus
+  last_run_by: string
+  created_by: string
+  updated_by: string
+}
+
+type TimerLogAction = 'created' | 'updated' | 'restarted' | 'stopped' | 'deleted' | 'role_changed'
+
+type SupabaseClientResult =
+  | {
+      error: Response
+      token: null
+      supabase: null
+    }
+  | {
+      error: null
+      token: string
+      supabase: SupabaseClient
+    }
+
+type SupabaseServiceClientResult =
+  | {
+      error: Response
+      supabase: null
+    }
+  | {
+      error: null
+      supabase: SupabaseClient
+    }
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -62,7 +109,7 @@ function errorResponse(message: string, status: number): Response {
   return jsonResponse({ detail: message }, status)
 }
 
-function createSupabaseClient(req: Request) {
+function createSupabaseClient(req: Request): SupabaseClientResult {
   const authHeader = req.headers.get('Authorization')
 
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
@@ -97,6 +144,25 @@ function createSupabaseClient(req: Request) {
   return {
     error: null,
     token,
+    supabase,
+  }
+}
+
+function createSupabaseServiceClient(): SupabaseServiceClientResult {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return {
+      error: errorResponse('Supabase service role key is not configured', 500),
+      supabase: null,
+    }
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+
+  return {
+    error: null,
     supabase,
   }
 }
@@ -138,6 +204,14 @@ async function getCurrentUser(req: Request): Promise<CurrentUser | Response> {
   }
 }
 
+function requireTimerManager(currentUser: CurrentUser): Response | null {
+  if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+    return errorResponse('Not enough permissions', 403)
+  }
+
+  return null
+}
+
 function mapTimerResponse(timer: TimerRow): TimerResponse {
   return {
     id: timer.id,
@@ -154,6 +228,124 @@ function mapTimerResponse(timer: TimerRow): TimerResponse {
     updatedAt: timer.updated_at,
     soundEnabled: true,
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+async function parseJsonBody(req: Request): Promise<Record<string, unknown> | Response> {
+  try {
+    const body = await req.json()
+
+    if (!isRecord(body)) {
+      return errorResponse('Invalid JSON body', 400)
+    }
+
+    return body
+  } catch {
+    return errorResponse('Invalid JSON body', 400)
+  }
+}
+
+function validateTimerCreatePayload(body: Record<string, unknown>): TimerCreateRequest | Response {
+  const title = body.title
+  const description = body.description ?? ''
+  const imageUrl = body.imageUrl ?? null
+  const durationSeconds = body.durationSeconds
+  const minDurationSeconds = body.minDurationSeconds ?? null
+  const timeShiftSeconds = body.timeShiftSeconds ?? 0
+  const soundEnabled = body.soundEnabled ?? true
+
+  if (typeof title !== 'string' || title.trim().length === 0 || title.length > 120) {
+    return errorResponse('Invalid title', 400)
+  }
+
+  if (typeof description !== 'string') {
+    return errorResponse('Invalid description', 400)
+  }
+
+  if (imageUrl !== null && typeof imageUrl !== 'string') {
+    return errorResponse('Invalid imageUrl', 400)
+  }
+
+  if (typeof durationSeconds !== 'number' || !Number.isInteger(durationSeconds) || durationSeconds <= 0) {
+    return errorResponse('Invalid durationSeconds', 400)
+  }
+
+  if (
+    minDurationSeconds !== null &&
+    (typeof minDurationSeconds !== 'number' ||
+      !Number.isInteger(minDurationSeconds) ||
+      minDurationSeconds < 0)
+  ) {
+    return errorResponse('Invalid minDurationSeconds', 400)
+  }
+
+  if (typeof timeShiftSeconds !== 'number' || !Number.isInteger(timeShiftSeconds) || timeShiftSeconds < 0) {
+    return errorResponse('Invalid timeShiftSeconds', 400)
+  }
+
+  if (typeof soundEnabled !== 'boolean') {
+    return errorResponse('Invalid soundEnabled', 400)
+  }
+
+  return {
+    title,
+    description,
+    imageUrl,
+    durationSeconds,
+    minDurationSeconds,
+    timeShiftSeconds,
+    soundEnabled,
+  }
+}
+
+function mapTimerCreatePayload(payload: TimerCreateRequest, userId: string): TimerCreateRow {
+  return {
+    title: payload.title,
+    description: payload.description ?? '',
+    image_url: payload.imageUrl ?? null,
+    duration_seconds: payload.durationSeconds,
+    min_duration_seconds: payload.minDurationSeconds ?? null,
+    time_shift_seconds: payload.timeShiftSeconds ?? 0,
+    status: 'active',
+    last_run_by: userId,
+    created_by: userId,
+    updated_by: userId,
+  }
+}
+
+async function logTimerAction(params: {
+  timerId: string
+  userId: string
+  action: TimerLogAction
+  oldStatus: TimerStatus | null
+  newStatus: TimerStatus | null
+  details: Record<string, unknown>
+}): Promise<Response | null> {
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const { error } = await supabase.from('timer_logs').insert({
+    timer_id: params.timerId,
+    user_id: params.userId,
+    action: params.action,
+    old_status: params.oldStatus,
+    new_status: params.newStatus,
+    details: params.details,
+  })
+
+  if (error) {
+    return errorResponse('Failed to write timer log', 500)
+  }
+
+  return null
 }
 
 async function getTimers(req: Request): Promise<Response> {
@@ -201,6 +393,84 @@ async function getTimers(req: Request): Promise<Response> {
   return jsonResponse(timers)
 }
 
+async function createTimer(req: Request): Promise<Response> {
+  const currentUser = await getCurrentUser(req)
+
+  if (currentUser instanceof Response) {
+    return currentUser
+  }
+
+  const permissionError = requireTimerManager(currentUser)
+
+  if (permissionError) {
+    return permissionError
+  }
+
+  const body = await parseJsonBody(req)
+
+  if (body instanceof Response) {
+    return body
+  }
+
+  const payload = validateTimerCreatePayload(body)
+
+  if (payload instanceof Response) {
+    return payload
+  }
+
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const createData = mapTimerCreatePayload(payload, currentUser.id)
+
+  const { data, error } = await supabase
+    .from('timers')
+    .insert(createData)
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'image_url',
+        'duration_seconds',
+        'min_duration_seconds',
+        'time_shift_seconds',
+        'started_at',
+        'last_run_by',
+        'status',
+        'created_at',
+        'updated_at',
+      ].join(', '),
+    )
+    .single()
+
+  if (error || !data) {
+    return errorResponse('Failed to create timer', 500)
+  }
+
+  const createdTimer = data as unknown as TimerRow
+
+  const logError = await logTimerAction({
+    timerId: createdTimer.id,
+    userId: currentUser.id,
+    action: 'created',
+    oldStatus: null,
+    newStatus: createdTimer.status,
+    details: {},
+  })
+
+  if (logError) {
+    return logError
+  }
+
+  return jsonResponse(mapTimerResponse(createdTimer), 201)
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -227,6 +497,10 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === 'GET' && pathname.endsWith('/timers')) {
     return await getTimers(req)
+  }
+
+  if (req.method === 'POST' && pathname.endsWith('/timers')) {
+    return await createTimer(req)
   }
 
   return jsonResponse(
