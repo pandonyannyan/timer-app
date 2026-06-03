@@ -58,6 +58,16 @@ type TimerCreateRequest = {
   soundEnabled?: boolean
 }
 
+type TimerUpdateRequest = {
+  title?: string | null
+  description?: string | null
+  imageUrl?: string | null
+  durationSeconds?: number | null
+  minDurationSeconds?: number | null
+  timeShiftSeconds?: number | null
+  soundEnabled?: boolean | null
+}
+
 type TimerCreateRow = {
   title: string
   description: string
@@ -68,6 +78,16 @@ type TimerCreateRow = {
   status: TimerStatus
   last_run_by: string
   created_by: string
+  updated_by: string
+}
+
+type TimerUpdateRow = {
+  title?: string
+  description?: string
+  image_url?: string
+  duration_seconds?: number
+  min_duration_seconds?: number
+  time_shift_seconds?: number
   updated_by: string
 }
 
@@ -212,6 +232,17 @@ function requireTimerManager(currentUser: CurrentUser): Response | null {
   return null
 }
 
+function getTimerIdFromPath(pathname: string): string | null {
+  const parts = pathname.split('/').filter(Boolean)
+  const timersIndex = parts.lastIndexOf('timers')
+
+  if (timersIndex === -1 || timersIndex + 1 >= parts.length) {
+    return null
+  }
+
+  return parts[timersIndex + 1]
+}
+
 function mapTimerResponse(timer: TimerRow): TimerResponse {
   return {
     id: timer.id,
@@ -301,6 +332,80 @@ function validateTimerCreatePayload(body: Record<string, unknown>): TimerCreateR
   }
 }
 
+function validateTimerUpdatePayload(body: Record<string, unknown>): TimerUpdateRequest | Response {
+  const payload: TimerUpdateRequest = {}
+
+  if ('title' in body && body.title !== null) {
+    if (typeof body.title !== 'string' || body.title.trim().length === 0 || body.title.length > 120) {
+      return errorResponse('Invalid title', 400)
+    }
+
+    payload.title = body.title
+  }
+
+  if ('description' in body && body.description !== null) {
+    if (typeof body.description !== 'string') {
+      return errorResponse('Invalid description', 400)
+    }
+
+    payload.description = body.description
+  }
+
+  if ('imageUrl' in body && body.imageUrl !== null) {
+    if (typeof body.imageUrl !== 'string') {
+      return errorResponse('Invalid imageUrl', 400)
+    }
+
+    payload.imageUrl = body.imageUrl
+  }
+
+  if ('durationSeconds' in body && body.durationSeconds !== null) {
+    if (
+      typeof body.durationSeconds !== 'number' ||
+      !Number.isInteger(body.durationSeconds) ||
+      body.durationSeconds <= 0
+    ) {
+      return errorResponse('Invalid durationSeconds', 400)
+    }
+
+    payload.durationSeconds = body.durationSeconds
+  }
+
+  if ('minDurationSeconds' in body && body.minDurationSeconds !== null) {
+    if (
+      typeof body.minDurationSeconds !== 'number' ||
+      !Number.isInteger(body.minDurationSeconds) ||
+      body.minDurationSeconds < 0
+    ) {
+      return errorResponse('Invalid minDurationSeconds', 400)
+    }
+
+    payload.minDurationSeconds = body.minDurationSeconds
+  }
+
+  if ('timeShiftSeconds' in body && body.timeShiftSeconds !== null) {
+    if (
+      typeof body.timeShiftSeconds !== 'number' ||
+      !Number.isInteger(body.timeShiftSeconds) ||
+      body.timeShiftSeconds < 0
+    ) {
+      return errorResponse('Invalid timeShiftSeconds', 400)
+    }
+
+    payload.timeShiftSeconds = body.timeShiftSeconds
+  }
+
+  if ('soundEnabled' in body && body.soundEnabled !== null) {
+    if (typeof body.soundEnabled !== 'boolean') {
+      return errorResponse('Invalid soundEnabled', 400)
+    }
+
+    payload.soundEnabled = body.soundEnabled
+  }
+
+  return payload
+}
+
 function mapTimerCreatePayload(payload: TimerCreateRequest, userId: string): TimerCreateRow {
   return {
     title: payload.title,
@@ -314,6 +419,38 @@ function mapTimerCreatePayload(payload: TimerCreateRequest, userId: string): Tim
     created_by: userId,
     updated_by: userId,
   }
+}
+
+function mapTimerUpdatePayload(payload: TimerUpdateRequest, userId: string): TimerUpdateRow {
+  const updateData: TimerUpdateRow = {
+    updated_by: userId,
+  }
+
+  if (payload.title !== undefined && payload.title !== null) {
+    updateData.title = payload.title
+  }
+
+  if (payload.description !== undefined && payload.description !== null) {
+    updateData.description = payload.description
+  }
+
+  if (payload.imageUrl !== undefined && payload.imageUrl !== null) {
+    updateData.image_url = payload.imageUrl
+  }
+
+  if (payload.durationSeconds !== undefined && payload.durationSeconds !== null) {
+    updateData.duration_seconds = payload.durationSeconds
+  }
+
+  if (payload.minDurationSeconds !== undefined && payload.minDurationSeconds !== null) {
+    updateData.min_duration_seconds = payload.minDurationSeconds
+  }
+
+  if (payload.timeShiftSeconds !== undefined && payload.timeShiftSeconds !== null) {
+    updateData.time_shift_seconds = payload.timeShiftSeconds
+  }
+
+  return updateData
 }
 
 async function logTimerAction(params: {
@@ -471,6 +608,161 @@ async function createTimer(req: Request): Promise<Response> {
   return jsonResponse(mapTimerResponse(createdTimer), 201)
 }
 
+async function updateTimer(req: Request, timerId: string): Promise<Response> {
+  const currentUser = await getCurrentUser(req)
+
+  if (currentUser instanceof Response) {
+    return currentUser
+  }
+
+  const permissionError = requireTimerManager(currentUser)
+
+  if (permissionError) {
+    return permissionError
+  }
+
+  const body = await parseJsonBody(req)
+
+  if (body instanceof Response) {
+    return body
+  }
+
+  const payload = validateTimerUpdatePayload(body)
+
+  if (payload instanceof Response) {
+    return payload
+  }
+
+  const updateData = mapTimerUpdatePayload(payload, currentUser.id)
+  const updatedFields = Object.keys(updateData).filter((key) => key !== 'updated_by')
+
+  if (updatedFields.length === 0) {
+    return errorResponse('No fields to update', 400)
+  }
+
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const { data: existingTimer, error: existingTimerError } = await supabase
+    .from('timers')
+    .select('id, status')
+    .eq('id', timerId)
+    .single()
+
+  if (existingTimerError || !existingTimer) {
+    return errorResponse('Timer not found', 404)
+  }
+
+  const { data, error } = await supabase
+    .from('timers')
+    .update(updateData)
+    .eq('id', timerId)
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'image_url',
+        'duration_seconds',
+        'min_duration_seconds',
+        'time_shift_seconds',
+        'started_at',
+        'last_run_by',
+        'status',
+        'created_at',
+        'updated_at',
+      ].join(', '),
+    )
+    .single()
+
+  if (error || !data) {
+    return errorResponse('Failed to update timer', 500)
+  }
+
+  const updatedTimer = data as unknown as TimerRow
+  const oldStatus = (existingTimer as { status: TimerStatus }).status
+
+  const logError = await logTimerAction({
+    timerId,
+    userId: currentUser.id,
+    action: 'updated',
+    oldStatus,
+    newStatus: updatedTimer.status,
+    details: {
+      updatedFields,
+    },
+  })
+
+  if (logError) {
+    return logError
+  }
+
+  return jsonResponse(mapTimerResponse(updatedTimer))
+}
+
+async function deleteTimer(req: Request, timerId: string): Promise<Response> {
+  const currentUser = await getCurrentUser(req)
+
+  if (currentUser instanceof Response) {
+    return currentUser
+  }
+
+  const permissionError = requireTimerManager(currentUser)
+
+  if (permissionError) {
+    return permissionError
+  }
+
+  const serviceClientResult = createSupabaseServiceClient()
+
+  if (serviceClientResult.error) {
+    return serviceClientResult.error
+  }
+
+  const { supabase } = serviceClientResult
+
+  const { data: existingTimer, error: existingTimerError } = await supabase
+    .from('timers')
+    .select('id, status')
+    .eq('id', timerId)
+    .single()
+
+  if (existingTimerError || !existingTimer) {
+    return errorResponse('Timer not found', 404)
+  }
+
+  const oldStatus = (existingTimer as { status: TimerStatus }).status
+
+  const logError = await logTimerAction({
+    timerId,
+    userId: currentUser.id,
+    action: 'deleted',
+    oldStatus,
+    newStatus: null,
+    details: {},
+  })
+
+  if (logError) {
+    return logError
+  }
+
+  const { error } = await supabase.from('timers').delete().eq('id', timerId)
+
+  if (error) {
+    return errorResponse('Failed to delete timer', 500)
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  })
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -501,6 +793,22 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === 'POST' && pathname.endsWith('/timers')) {
     return await createTimer(req)
+  }
+
+  if (req.method === 'PATCH') {
+    const timerId = getTimerIdFromPath(pathname)
+
+    if (timerId && pathname.endsWith(`/timers/${timerId}`)) {
+      return await updateTimer(req, timerId)
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    const timerId = getTimerIdFromPath(pathname)
+
+    if (timerId && pathname.endsWith(`/timers/${timerId}`)) {
+      return await deleteTimer(req, timerId)
+    }
   }
 
   return jsonResponse(
