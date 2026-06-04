@@ -11,6 +11,7 @@ type UserRole = 'admin' | 'manager' | 'member'
 type CurrentUser = {
   id: string
   email: string | null
+  displayName: string | null
   role: UserRole
   is_active: boolean
 }
@@ -42,6 +43,7 @@ type TimerResponse = {
   timeShiftSeconds: number
   startedAt: string
   lastRunBy: string | null
+  lastRunByDisplayName: string | null
   status: TimerStatus
   createdAt: string
   updatedAt: string
@@ -208,7 +210,7 @@ async function getCurrentUser(req: Request): Promise<CurrentUser | Response> {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, email, role, is_active')
+    .select('id, email, display_name, role, is_active')
     .eq('id', authData.user.id)
     .single()
 
@@ -223,6 +225,7 @@ async function getCurrentUser(req: Request): Promise<CurrentUser | Response> {
   return {
     id: profile.id,
     email: profile.email ?? authData.user.email ?? null,
+    displayName: profile.display_name,
     role: profile.role,
     is_active: profile.is_active,
   }
@@ -247,7 +250,10 @@ function getTimerIdFromPath(pathname: string): string | null {
   return parts[timersIndex + 1]
 }
 
-function mapTimerResponse(timer: TimerRow): TimerResponse {
+function mapTimerResponse(
+  timer: TimerRow,
+  lastRunByDisplayName: string | null = null,
+): TimerResponse {
   return {
     id: timer.id,
     title: timer.title,
@@ -258,6 +264,7 @@ function mapTimerResponse(timer: TimerRow): TimerResponse {
     timeShiftSeconds: timer.time_shift_seconds,
     startedAt: timer.started_at,
     lastRunBy: timer.last_run_by,
+    lastRunByDisplayName,
     status: timer.status,
     createdAt: timer.created_at,
     updatedAt: timer.updated_at,
@@ -529,7 +536,38 @@ async function getTimers(req: Request): Promise<Response> {
   }
 
   const timerRows = (data ?? []) as unknown as TimerRow[]
-  const timers = timerRows.map(mapTimerResponse)
+
+  const lastRunByUserIds = [
+    ...new Set(
+      timerRows
+        .map((timer) => timer.last_run_by)
+        .filter((userId): userId is string => Boolean(userId)),
+    ),
+  ]
+
+  const profilesById = new Map<string, string | null>()
+
+  if (lastRunByUserIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', lastRunByUserIds)
+
+    if (profilesError) {
+      return errorResponse('Failed to load timer profiles', 500)
+    }
+
+    for (const profile of profiles ?? []) {
+      profilesById.set(profile.id, profile.display_name)
+    }
+  }
+
+  const timers = timerRows.map((timer) =>
+    mapTimerResponse(
+      timer,
+      timer.last_run_by ? profilesById.get(timer.last_run_by) ?? null : null,
+    ),
+  )
 
   return jsonResponse(timers)
 }
@@ -609,7 +647,7 @@ async function createTimer(req: Request): Promise<Response> {
     return logError
   }
 
-  return jsonResponse(mapTimerResponse(createdTimer), 201)
+  return jsonResponse(mapTimerResponse(createdTimer, currentUser.displayName), 201)
 }
 
 async function updateTimer(req: Request, timerId: string): Promise<Response> {
@@ -706,7 +744,23 @@ async function updateTimer(req: Request, timerId: string): Promise<Response> {
     return logError
   }
 
-  return jsonResponse(mapTimerResponse(updatedTimer))
+  let lastRunByDisplayName: string | null = null
+
+  if (updatedTimer.last_run_by) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', updatedTimer.last_run_by)
+      .single()
+
+    if (profileError) {
+      return errorResponse('Failed to load timer profile', 500)
+    }
+
+    lastRunByDisplayName = profile.display_name
+  }
+
+  return jsonResponse(mapTimerResponse(updatedTimer, lastRunByDisplayName))
 }
 
 async function deleteTimer(req: Request, timerId: string): Promise<Response> {
@@ -885,7 +939,7 @@ async function restartTimer(req: Request, timerId: string): Promise<Response> {
     return logError
   }
 
-  return jsonResponse(mapTimerResponse(updatedTimer))
+  return jsonResponse(mapTimerResponse(updatedTimer, currentUser.displayName))
 }
 
 async function stopTimer(req: Request, timerId: string): Promise<Response> {
@@ -962,7 +1016,23 @@ async function stopTimer(req: Request, timerId: string): Promise<Response> {
     return logError
   }
 
-  return jsonResponse(mapTimerResponse(updatedTimer))
+  let lastRunByDisplayName: string | null = null
+
+  if (updatedTimer.last_run_by) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', updatedTimer.last_run_by)
+      .single()
+
+    if (profileError) {
+      return errorResponse('Failed to load timer profile', 500)
+    }
+
+    lastRunByDisplayName = profile.display_name
+  }
+
+  return jsonResponse(mapTimerResponse(updatedTimer, lastRunByDisplayName))
 }
 
 Deno.serve(async (req: Request) => {

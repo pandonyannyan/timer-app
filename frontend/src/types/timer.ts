@@ -17,6 +17,7 @@ export interface Timer {
   timeShiftSeconds: number
   startedAt: string
   lastRunBy: string
+  lastRunByDisplayName?: string | null
   status: TimerStatus
   soundEnabled: boolean
   createdAt: string

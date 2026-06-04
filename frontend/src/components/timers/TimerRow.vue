@@ -404,7 +404,7 @@ function handleDeleteTimer() {
           delay {{ shiftMinutes }} мин
         </span>
       </div>
-      <div class="user">{{ timer.lastRunBy }}</div>
+      <div class="user">{{ timer.lastRunByDisplayName || 'Без имени' }}</div>
     </div>
 
     <div class="actions">
