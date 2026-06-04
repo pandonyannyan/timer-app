@@ -64,7 +64,7 @@
       <button
         class="secondary-btn with-icon"
         type="button"
-        :disabled="!canReorderPinnedTimers"
+        :disabled="actionsDisabled || !canReorderPinnedTimers"
         :title="reorderButtonTitle"
         @click="$emit('toggleReorder')"
       >
@@ -75,7 +75,7 @@
       <button
         class="secondary-btn with-icon"
         type="button"
-        :disabled="!canCreateTimer || isReorderMode"
+        :disabled="actionsDisabled || !canCreateTimer || isReorderMode"
         :title="addButtonTitle"
         @click="openAddTimerModal"
       >
@@ -113,6 +113,7 @@ const props = defineProps<{
   statusFilter: 'all' | 'active'
   isReorderMode: boolean
   canReorderPinnedTimers: boolean
+  actionsDisabled: boolean
 }>()
 
 defineEmits<{
@@ -129,6 +130,10 @@ const {
 } = usePermissions()
 
 const reorderButtonTitle = computed(() => {
+  if (props.actionsDisabled) {
+    return 'Действия временно недоступны'
+  }
+
   if (props.isReorderMode) {
     return 'Сохранить порядок закреплённых таймеров'
   }
@@ -141,6 +146,7 @@ const reorderButtonTitle = computed(() => {
 })
 
 const addButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
   if (!canCreateTimer.value) return 'Недостаточно прав'
   if (props.isReorderMode) return 'Сначала сохраните порядок'
 
@@ -160,7 +166,7 @@ function blurActiveElement() {
 }
 
 function openAddTimerModal() {
-  if (!canCreateTimer.value || props.isReorderMode) return
+  if (props.actionsDisabled || !canCreateTimer.value || props.isReorderMode) return
 
   showAddTimerModal.value = true
   blurActiveElement()

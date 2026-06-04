@@ -141,6 +141,7 @@ export interface Timer {
   timeShiftSeconds: number
   startedAt: string
   lastRunBy: string
+  lastRunByDisplayName: string | null
   status: TimerStatus
   soundEnabled: boolean
   createdAt: string
@@ -312,6 +313,7 @@ Health/Auth:
     "timeShiftSeconds": 0,
     "startedAt": "2026-06-03T17:18:28.340749+00:00",
     "lastRunBy": "uuid",
+    "lastRunByDisplayName": "Rostislav"
     "status": "active",
     "createdAt": "2026-06-03T17:18:28.340749+00:00",
     "updatedAt": "2026-06-03T17:18:28.340749+00:00",

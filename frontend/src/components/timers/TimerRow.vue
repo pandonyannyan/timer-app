@@ -30,9 +30,11 @@ const props = withDefaults(defineProps<{
   timer: Timer
   isReorderMode?: boolean
   isPinned?: boolean
+  actionsDisabled?: boolean
 }>(), {
   isReorderMode: false,
   isPinned: false,
+  actionsDisabled: false,
 })
 
 const emit = defineEmits<{
@@ -68,11 +70,16 @@ const hasPlayedSound = ref(false)
 const hasPlayedWarningSound = ref(false)
 const soundEnabled = ref(isSoundEnabled(props.timer.id))
 
+const areActionsBlocked = computed(() => {
+  return props.actionsDisabled || props.isReorderMode
+})
+
 const effectiveSoundEnabled = computed(() => {
   return globalSoundEnabled.value && soundEnabled.value
 })
 
 const soundButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
   if (props.isReorderMode) return 'Сначала сохраните порядок'
 
   if (!globalSoundEnabled.value) {
@@ -85,6 +92,8 @@ const soundButtonTitle = computed(() => {
 })
 
 const pinButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
+
   return props.isPinned ? 'Открепить таймер' : 'Закрепить таймер'
 })
 
@@ -179,6 +188,7 @@ const lastRunTime = computed(() => {
 })
 
 const stopButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
   if (props.isReorderMode) return 'Сначала сохраните порядок'
   if (!canStop.value) return 'Остановить можно только активный таймер'
 
@@ -186,6 +196,7 @@ const stopButtonTitle = computed(() => {
 })
 
 const editButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
   if (props.isReorderMode) return 'Сначала сохраните порядок'
   if (!canEditTimer.value) return 'Недостаточно прав'
 
@@ -193,6 +204,7 @@ const editButtonTitle = computed(() => {
 })
 
 const deleteButtonTitle = computed(() => {
+  if (props.actionsDisabled) return 'Действия временно недоступны'
   if (props.isReorderMode) return 'Сначала сохраните порядок'
   if (!canDeleteTimer.value) return 'Недостаточно прав'
 
@@ -212,7 +224,7 @@ function formatTime(sec: number) {
 }
 
 function completeTimer() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
 
   stopAudio()
   stopWarningAudio()
@@ -221,13 +233,13 @@ function completeTimer() {
 }
 
 function togglePin() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
 
   emit('togglePin')
 }
 
 function toggleSound() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
 
   soundEnabled.value = toggleTimerSound(props.timer.id)
 
@@ -237,7 +249,7 @@ function toggleSound() {
 }
 
 function openRestartModal() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
 
   showRestartModal.value = true
   blurActiveElement()
@@ -280,7 +292,7 @@ function closeDeleteModal() {
 }
 
 async function stopTimer() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
 
   try {
     await timersStore.stopTimer(props.timer.id)
@@ -293,35 +305,47 @@ async function stopTimer() {
 }
 
 function openEditModal() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
   if (!canEditTimer.value) return
 
   showEditModal.value = true
   blurActiveElement()
 }
 
-function handleUpdateTimer(payload: TimerFormPayload) {
-  timersStore.updateTimer(props.timer.id, payload)
+async function handleUpdateTimer(payload: TimerFormPayload) {
+  if (areActionsBlocked.value) return
 
-  closeEditModal()
+  try {
+    await timersStore.updateTimer(props.timer.id, payload)
+
+    closeEditModal()
+  } catch (error) {
+    console.error('Failed to update timer', error)
+  }
 }
 
 function openDeleteModal() {
-  if (props.isReorderMode) return
+  if (areActionsBlocked.value) return
   if (!canDeleteTimer.value) return
 
   showDeleteModal.value = true
   blurActiveElement()
 }
 
-function handleDeleteTimer() {
-  stopAudio()
-  stopWarningAudio()
+async function handleDeleteTimer() {
+  if (areActionsBlocked.value) return
 
-  removePinnedTimer(props.timer.id)
-  timersStore.deleteTimer(props.timer.id)
+  try {
+    stopAudio()
+    stopWarningAudio()
 
-  closeDeleteModal()
+    await timersStore.deleteTimer(props.timer.id)
+
+    removePinnedTimer(props.timer.id)
+    closeDeleteModal()
+  } catch (error) {
+    console.error('Failed to delete timer', error)
+  }
 }
 </script>
 
@@ -350,6 +374,7 @@ function handleDeleteTimer() {
         class="pin-button"
         :class="{ 'pin-button--active': isPinned }"
         type="button"
+        :disabled="actionsDisabled"
         :title="pinButtonTitle"
         :aria-label="pinButtonTitle"
         @click="togglePin"
@@ -411,8 +436,8 @@ function handleDeleteTimer() {
       <button
         v-if="viewStatus === 'signal'"
         class="complete-btn"
-        :disabled="isReorderMode"
-        :title="isReorderMode ? 'Сначала сохраните порядок' : 'Завершить'"
+      :disabled="areActionsBlocked"
+      :title="actionsDisabled ? 'Действия временно недоступны' : isReorderMode ? 'Сначала сохраните порядок' : 'Завершить'"
         @click="completeTimer"
       >
         Завершить
@@ -420,8 +445,8 @@ function handleDeleteTimer() {
 
       <template v-else>
         <IconButton
-          title="Перезапустить"
-          :disabled="isReorderMode"
+          :title="actionsDisabled ? 'Действия временно недоступны' : isReorderMode ? 'Сначала сохраните порядок' : 'Перезапустить'"
+          :disabled="areActionsBlocked"
           @click="openRestartModal"
         >
           <img :src="restartIcon" alt="restart">
@@ -429,7 +454,7 @@ function handleDeleteTimer() {
 
         <IconButton
           class="action-button"
-          :disabled="isReorderMode || !canStop"
+          :disabled="areActionsBlocked || !canStop"
           :title="stopButtonTitle"
           @click="stopTimer"
         >
@@ -437,7 +462,7 @@ function handleDeleteTimer() {
         </IconButton>
 
         <IconButton
-          :disabled="isReorderMode"
+          :disabled="areActionsBlocked"
           :title="soundButtonTitle"
           @click="toggleSound"
         >
@@ -448,7 +473,7 @@ function handleDeleteTimer() {
         </IconButton>
 
         <IconButton
-          :disabled="isReorderMode || !canEditTimer"
+          :disabled="areActionsBlocked || !canEditTimer"
           :title="editButtonTitle"
           @click="openEditModal"
         >
@@ -456,7 +481,7 @@ function handleDeleteTimer() {
         </IconButton>
 
         <IconButton
-          :disabled="isReorderMode || !canDeleteTimer"
+          :disabled="areActionsBlocked || !canDeleteTimer"
           :title="deleteButtonTitle"
           @click="openDeleteModal"
         >
@@ -576,6 +601,17 @@ function handleDeleteTimer() {
   color: #6f89ad;
   background: #eef3f7;
   border-color: #d5dde8;
+}
+
+.pin-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pin-button:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+  color: #9ca3af;
 }
 
 .pin-icon {

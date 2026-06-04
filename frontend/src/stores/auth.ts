@@ -56,9 +56,22 @@ export const useAuthStore = defineStore('auth', {
 
     listenToAuthChanges() {
       return supabase.auth.onAuthStateChange(async (_event, session) => {
-        this.session = session
-        this.user = session?.user ?? null
-        this.profile = session ? await getCurrentProfile() : null
+        try {
+          this.isLoading = true
+          this.error = null
+
+          this.session = session
+          this.user = session?.user ?? null
+          this.profile = session ? await getCurrentProfile() : null
+        } catch (error) {
+          this.error = error instanceof Error ? error.message : 'Failed to update auth state'
+          this.session = null
+          this.user = null
+          this.profile = null
+        } finally {
+          this.isLoading = false
+          this.isInitialized = true
+        }
       })
     },
 
@@ -95,6 +108,7 @@ export const useAuthStore = defineStore('auth', {
         throw error
       } finally {
         this.isLoading = false
+        this.isInitialized = true
       }
     },
   },

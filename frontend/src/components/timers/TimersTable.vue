@@ -35,7 +35,8 @@
         :timer="timer"
         :is-reorder-mode="isReorderMode"
         :is-pinned="pinnedTimerIds.includes(timer.id)"
-        @toggle-pin="$emit('togglePin', timer.id)"
+        :actions-disabled="actionsDisabled"
+        @toggle-pin="handleTogglePin(timer.id)"
       />
     </div>
 
@@ -54,6 +55,7 @@ const props = defineProps<{
   timers: Timer[]
   isReorderMode: boolean
   pinnedTimerIds: string[]
+  actionsDisabled: boolean
 }>()
 
 const emit = defineEmits<{
@@ -64,12 +66,14 @@ const emit = defineEmits<{
 const draggedIndex = ref<number | null>(null)
 
 function handleDragStart(index: number) {
+  if (props.actionsDisabled) return
   if (!props.isReorderMode) return
 
   draggedIndex.value = index
 }
 
 function handleDrop(targetIndex: number) {
+  if (props.actionsDisabled) return
   if (!props.isReorderMode) return
   if (draggedIndex.value === null) return
   if (draggedIndex.value === targetIndex) return
@@ -86,6 +90,12 @@ function handleDrop(targetIndex: number) {
 
 function handleDragEnd() {
   draggedIndex.value = null
+}
+
+function handleTogglePin(timerId: string) {
+  if (props.actionsDisabled) return
+
+  emit('togglePin', timerId)
 }
 </script>
 

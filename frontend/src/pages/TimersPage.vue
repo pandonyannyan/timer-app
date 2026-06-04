@@ -15,18 +15,37 @@
       <button
         class="logout-button"
         type="button"
-        :disabled="authStore.isLoading"
+        :disabled="!authStore.isInitialized || authStore.isLoading"
         @click="handleLogout"
       >
         Выйти
       </button>
     </header>
 
+    <div v-if="authStore.error || timersStore.error || timersStore.actionError" class="error-list">
+      <p v-if="authStore.error" class="error-message">
+        {{ authStore.error }}
+      </p>
+
+      <p v-if="timersStore.error" class="error-message">
+        {{ timersStore.error }}
+      </p>
+
+      <p v-if="timersStore.actionError" class="error-message">
+        {{ timersStore.actionError }}
+      </p>
+    </div>
+
+    <p v-if="timersStore.isLoading" class="loading-message">
+      Загружаем таймеры…
+    </p>
+
     <TimersToolbar
       v-model:search-query="searchQuery"
       v-model:status-filter="statusFilter"
       :is-reorder-mode="isReorderMode"
       :can-reorder-pinned-timers="canReorderPinnedTimers"
+      :actions-disabled="areTimerActionsDisabled"
       @toggle-reorder="toggleReorderMode"
     />
 
@@ -34,6 +53,7 @@
       :timers="visibleTimers"
       :is-reorder-mode="isReorderMode"
       :pinned-timer-ids="currentPinnedTimerIds"
+      :actions-disabled="areTimerActionsDisabled"
       @toggle-pin="togglePinnedTimer"
       @reorder="handleReorder"
     />
@@ -41,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TimersToolbar from '../components/timers/TimersToolbar.vue'
 import TimersTable from '../components/timers/TimersTable.vue'
@@ -59,9 +79,34 @@ const authStore = useAuthStore()
 const timersStore = useTimersStore()
 const { now } = useNow()
 
-onMounted(async () => {
-  await timersStore.loadTimers()
+const isAuthReady = computed(() => {
+  return (
+    authStore.isInitialized &&
+    !authStore.isLoading &&
+    authStore.isAuthenticated &&
+    authStore.profile !== null
+  )
 })
+
+const areTimerActionsDisabled = computed(() => {
+  return !isAuthReady.value || timersStore.isLoading || timersStore.isActionPending
+})
+
+onMounted(async () => {
+  if (isAuthReady.value) {
+    await timersStore.loadTimers()
+  }
+})
+
+watch(
+  isAuthReady,
+  async (ready) => {
+    if (!ready) return
+
+    await timersStore.loadTimers()
+  },
+  { once: true },
+)
 
 const {
   pinnedTimerIds,
@@ -104,8 +149,14 @@ const viewStatusPriority: Record<TimerViewStatus, number> = {
 }
 
 async function handleLogout() {
-  await authStore.logout()
-  router.push('/login')
+  if (!authStore.isInitialized || authStore.isLoading) return
+
+  try {
+    await authStore.logout()
+    router.push('/login')
+  } catch {
+    // Ошибка уже сохранена в authStore.error
+  }
 }
 
 function getEffectiveDuration(timer: Timer) {
@@ -302,5 +353,27 @@ function handleReorder(nextTimers: Timer[]) {
 .logout-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.error-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.error-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.loading-message {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 14px;
 }
 </style>
